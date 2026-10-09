@@ -45,7 +45,7 @@
  <div class="status-bar"><div class="status" role="status" aria-live="polite"><span id="dot" class="dot"></span><span id="statusText">Ready to track Jack’s plane.</span></div><div class="source" id="updatedText">Not tracking</div></div>
 <div id="radarDiagnostic" class="diagnostic-note hidden">Live radar is not responding. <a href="./radar-test.html">Run radar and map checks →</a> and send a screenshot of the results.</div>
 <div class="layout"><section class="map-wrap" aria-label="Aircraft map"><div id="map"></div><div class="map-overlay"><span aria-hidden="true">⌖</span><span id="mapLabel">Map ready</span></div><button class="map-control" type="button" id="recenterBtn" disabled>⌖ Center on plane</button></section><aside class="side"><div class="card"><div class="card-label">Tracking</div><div id="tailDisplay" class="tail">N233ND</div><div id="typeDisplay" class="aircraft">Sweet Aviation • Diamond DA20-C1</div><div class="stats"><div><div class="card-label">Altitude</div><div id="altDisplay" class="value">—</div><div class="unit">feet</div></div><div><div class="card-label">Speed</div><div id="speedDisplay" class="value">—</div><div class="unit">mph (ground)</div></div><div><div class="card-label">Heading</div><div id="headingDisplay" class="value">—</div><div class="unit">degrees</div></div></div><div id="lastDisplay" class="last">Live details appear when the aircraft is broadcasting a position.</div></div><div class="card notice"><strong>Important</strong> — This follows the <strong>airplane</strong>, not Jack's phone. Aircraft can disappear from public tracking because of low altitude, receiver coverage, equipment, or privacy settings. Missing data is not an emergency indication. Do not use this app for flight safety decisions.</div></aside></div>
-<footer>Free personal aircraft data: <a href="https://avioadsb.org/" target="_blank" rel="noopener noreferrer">AvioADSB</a> (CC BY 4.0; 100 no-key requests/day and limited coverage). Cloudflare radar may be unavailable. No paid API key required. Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors,  No flight data is invented. Current-session track only.</footer>
+<footer>Free aircraft data: AvioADSB (CC BY 4.0) and delayed <a href="https://www.adsb.lol/" target="_blank" rel="noopener noreferrer">adsb.lol</a> samples (ODbL 1.0) via GitHub. Snapshots update approximately every 5 minutes, and are NOT LIVE. No paid API key required. Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors,  No flight data is invented. Current-session track only.</footer>
 </main></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -101,6 +101,10 @@ function sourcesForBrowser(){
    sources.push({name:'Free radar bridge',base:bridge,registration:(tail)=>'/api/aircraft/'+encodeURIComponent(tail),nearby:'/api/nearby'});
  }
  sources.push({name:'AvioADSB',base:'https://avioadsb.org',registration:(tail)=>'/v1/reg/'+encodeURIComponent(tail),nearby:'/v1/point/41.13/-85.14/100'});
+ // GitHub-collected ADSB.lol snapshot; positions are delayed, NOT live.
+ const snapshotBase='https://raw.githubusercontent.com/joshuamaziarz1-ux/-jacks-flight-tracker/radar-data';
+ const snapshotPath=()=>'/fort-wayne.json?minute='+Math.floor(Date.now()/60000);
+ sources.push({name:'GitHub sampled radar',base:snapshotBase,registration:snapshotPath,nearby:snapshotPath});
  return sources;
 }
 let activeTail = '', timer = null, marker = null, trail = null, sessionPath = [], lastPosition = null, requestSerial = 0, activeFetch = false, testSearching = false;
@@ -161,6 +165,11 @@ async function fetchSource(base,path, signal){
     if(!resp.ok)throw new Error('HTTP '+resp.status);
     const data=await resp.json();
     if(!data||!Array.isArray(data.ac))throw new Error('Unexpected data');
+    if(data.source==='adsb.lol via GitHub cached snapshot'){
+      const age=(Date.now()-Date.parse(data.fetchedAt))/1000;
+      if(!Number.isFinite(age)||age< -60||age>1800)throw new Error('Snapshot too old or invalid');
+      data.ac=data.ac.map(ac=>({...ac,seen_pos:Math.max(0,age)+Number(ac.seen_pos||0)}));
+    }
     return data;
   } finally {
     clearTimeout(timeout);signal?.removeEventListener('abort',abort);
@@ -189,10 +198,22 @@ async function update(){
  if(record){
    showRadarDiagnostics(false);
    const age=Number(record.seen_pos);
-   const fresh=Number.isFinite(age)&&age>=0&&age<=90&&Number.isFinite(Number(record.lat))&&Number.isFinite(Number(record.lon));
+   const sampled=connectedSource==='GitHub sampled radar';
+   const valid=Number.isFinite(age)&&age>=0&&Number.isFinite(Number(record.lat))&&Number.isFinite(Number(record.lon));
+   const fresh=valid&&!sampled&&age<=90;
    details(record,!fresh);
-   if(fresh){position(record,age);state(`Aircraft located via ${connectedSource} — position ${Math.round(age)}s old`,'live')}
-   else {state('Aircraft found, but no current position is available.','warn');mapLabel.textContent=lastPosition?'Last known position — not live':'Waiting for an aircraft position';}
+   if(valid&&age<=900){
+     position(record,age);
+     if(fresh)state(`Aircraft located via ${connectedSource} — position ${Math.round(age)}s old`,'live');
+     else{
+       mapLabel.textContent='DELAYED position — NOT LIVE';
+       state(`Aircraft position ${Math.ceil(age/60)} minutes old — NOT LIVE`,'warn');
+       elt('lastDisplay',`Last reported position ${Math.ceil(age/60)} minutes ago; the airplane may have moved.`);
+     }
+   }else{
+     state('Aircraft found, but no recent position is available.','warn');
+     mapLabel.textContent=lastPosition?'Last known position — not live':'Waiting for an aircraft position';
+   }
  } else if(ok){
    showRadarDiagnostics(false);
    elt('tailDisplay',tail);
@@ -223,13 +244,14 @@ async function findTestAircraft(){
    for(const source of sourcesForBrowser()){
      try{
        const data=await fetchSource(source.base,source.nearby);
+        const allowedAge=source.name==='GitHub sampled radar'?900:90;
        reached=true;
        candidates=data.ac.filter(ac=>{
          const reg=String(ac.r||'').trim().toUpperCase();
          const age=Number(ac.seen_pos),alt=Number(ac.alt_baro),gs=Number(ac.gs);
          return /^[A-Z][A-Z0-9-]{2,11}$/.test(reg)&&reg!==JACK_TAIL&&
            Number.isFinite(ac.lat)&&Number.isFinite(ac.lon)&&
-           Number.isFinite(age)&&age>=0&&age<=90&&
+           Number.isFinite(age)&&age>=0&&age<=allowedAge&&
            ac.alt_baro!=='ground'&&Number.isFinite(alt)&&alt>700&&
            Number.isFinite(gs)&&gs>40;
        });
@@ -243,7 +265,7 @@ async function findTestAircraft(){
      });
      const chosen=candidates[0],reg=String(chosen.r).trim().toUpperCase();
      input.value=reg;begin(reg);
-     state(`Found ${reg}. Checking its latest position…`);
+     state(`Found ${reg}. Checking its last reported position…`);
    }else if(reached){state('No suitable aircraft found nearby. Try again shortly.','warn');}
    else {showRadarDiagnostics(true);state(radarProblem(problems),'warn');}
  }finally {testSearching=false;testBtn.disabled=false;testBtn.textContent='✈ Find flying plane to test';}
