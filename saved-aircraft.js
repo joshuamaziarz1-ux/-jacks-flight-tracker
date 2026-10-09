@@ -194,7 +194,7 @@
   });
   if(memoryOnly)notify('Storage disabled: saved planes may disappear when this browser closes.');
   else notify('Aircraft lists are saved on this device. Export a backup to move them to another device.');
-  if(radarInput.value)byId('radarBridgeStatus').textContent='Free radar bridge configured. Live flight data appears when available.';
+  if(radarInput.value)byId('radarBridgeStatus').textContent='Optional Cloudflare bridge address. The app currently uses direct free data and GitHub delayed snapshots by default.';
   else byId('radarBridgeStatus').textContent='Live tracking needs a one-time free radar bridge setup; saving categories works now.';
   input.addEventListener('input',()=>{byId('saveCurrent').textContent=library.planes.some(p=>p.tail===safeTail(input.value))?'Update saved plane':'Save plane';});
   render();
