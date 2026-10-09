@@ -1,0 +1,39 @@
+name: Test Saved Aircraft and Radar Bridge
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "saved-aircraft.js"
+      - "saved-aircraft.css"
+      - "radar-bridge/**"
+      - "tests/**"
+      - ".github/workflows/saved-aircraft-tests.yml"
+  workflow_dispatch:
+jobs:
+  javascript-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install browser test dependency
+        run: npm install --no-save --no-package-lock jsdom@26
+      - name: Check syntax
+        run: |
+          node --check saved-aircraft.js
+          node --input-type=module --check < radar-bridge/worker.js
+          python3 - <<'PY'
+          import re
+          from pathlib import Path
+          html=Path('index.html').read_text()
+          inline=re.findall(r'<script(?:\s[^>]*)?>([\s\S]*?)</script>',html)
+          assert inline
+          Path('/tmp/jft-inline.js').write_text(inline[0])
+          PY
+          node --check /tmp/jft-inline.js
+      - name: Test library behavior
+        run: node tests/library-smoke.mjs
+      - name: Test radar bridge behavior
+        run: node tests/radar-bridge-smoke.mjs
