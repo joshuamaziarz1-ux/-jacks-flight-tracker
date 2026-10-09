@@ -13,14 +13,24 @@
 * {box-sizing:border-box} body {margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;} button,input{font:inherit} button{cursor:pointer} .page{min-height:100dvh;display:flex;flex-direction:column} .shell{width:min(100%,1180px);margin:0 auto;padding:22px clamp(15px,3vw,28px) 12px} .head{display:flex;gap:14px;align-items:center;justify-content:space-between;margin-bottom:23px} .brand{display:flex;align-items:center;gap:12px} .logo{height:43px;width:43px;border-radius:14px;display:grid;place-items:center;background:#19354a;border:1px solid #326078;color:var(--cyan);font-size:22px} h1{font-size:clamp(23px,3vw,30px);margin:0;letter-spacing:-.8px} .sub{font-size:13px;color:var(--muted);margin-top:4px} .tag{font-size:11px;letter-spacing:1.5px;color:var(--muted);white-space:nowrap} .search-panel{border:1px solid var(--border);background:var(--surface);padding:17px;border-radius:17px;margin-bottom:15px} .label{display:block;color:var(--muted);font-weight:600;font-size:13px;letter-spacing:.2px;margin-bottom:9px} .form-row{display:flex;gap:9px} .searchbox{min-width:0;flex:1;background:#0a1829;border:1px solid #3a5670;color:var(--text);border-radius:11px;padding:14px 15px;font-size:17px;text-transform:uppercase;letter-spacing:1px} .searchbox:focus{outline:2px solid var(--cyan);outline-offset:1px} .main-btn{background:var(--cyan);color:#052131;border:0;font-weight:800;border-radius:11px;padding:0 21px;white-space:nowrap} .main-btn:disabled{opacity:.65;cursor:wait} .helper{font-size:12px;color:var(--muted);margin:10px 0 0} .status-bar{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:0 3px 13px;min-height:40px} .status{display:flex;gap:9px;align-items:center;font-size:13px;line-height:1.4} .dot{height:8px;width:8px;border-radius:50%;background:#7b90a5;flex-shrink:0} .dot.live{background:var(--ok);box-shadow:0 0 10px #74dda888}.dot.warn{background:var(--warn)} .source{color:var(--muted);font-size:11px;text-align:right} .layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px;min-height:430px;flex:1} .map-wrap{min-width:0;position:relative;border:1px solid var(--border);border-radius:17px;overflow:hidden;background:var(--surface);height:min(72vh,680px);min-height:440px} #map{width:100%;height:100%;min-height:0;background:#e9eff2} .map-overlay{pointer-events:none;position:absolute;top:16px;left:16px;z-index:500;display:flex;gap:7px;align-items:center;background:#091726e8;color:#d9eafa;border:1px solid #39506b;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:700;max-width:calc(100% - 32px)} .map-control{position:absolute;right:14px;bottom:23px;z-index:500;min-height:37px;background:#101f32ee;border:1px solid #42617b;border-radius:9px;color:#f0f8ff;padding:8px 11px;font-weight:700;font-size:12px} .side{display:flex;flex-direction:column;gap:12px} .card{background:var(--surface);border:1px solid var(--border);border-radius:17px;padding:18px} .card-label{font-size:11px;color:var(--muted);letter-spacing:1.4px;font-weight:700;text-transform:uppercase} .tail{font-size:29px;font-weight:800;margin-top:13px;letter-spacing:1px} .aircraft{color:var(--muted);font-size:13px;margin-top:3px;min-height:19px} .stats{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:23px} .value{font-weight:800;font-size:23px;margin:5px 0 2px;letter-spacing:-.5px} .unit{font-size:12px;color:var(--muted)} .last{text-align:left;font-size:12px;color:var(--muted);margin-top:19px;padding-top:14px;border-top:1px solid var(--border);line-height:1.5} .notice{font-size:12px;line-height:1.55;color:var(--muted)} .notice strong{color:#e4eefb} footer{font-size:11px;color:#7991a7;padding:17px 0 9px;line-height:1.5} footer a{color:#afccdb} .plane-pin{height:38px;width:38px;display:grid;place-items:center;filter:drop-shadow(0 3px 6px #0009)} .plane-pin svg{width:34px;height:34px;stroke:white;stroke-width:1.5;paint-order:stroke;fill:#52dce8;transform-origin:50% 50%} .leaflet-container{font-family:inherit} .leaflet-control-attribution{background:#0a1726dd!important;color:#b6c3d2!important} .leaflet-control-attribution a{color:#8ad8ee!important}.leaflet-control-zoom a{background:#12263b!important;color:white!important;border-color:#47627b!important} .test-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}.minor-btn{padding:8px 12px;border-radius:9px;border:1px solid #47627b;background:#192f43;color:#e1f0fa;font-size:12px;font-weight:700}.minor-btn:disabled{opacity:.6}.back-btn{background:transparent;color:var(--cyan);border:0;font-size:12px;font-weight:700;padding:8px 4px}.hidden{display:none!important}
 @media(max-width:760px){.shell{padding-top:18px}.tag{display:none}.head{margin-bottom:18px}.layout{grid-template-columns:1fr;gap:12px} .map-wrap{height:55dvh;min-height:340px;max-height:580px} #map{height:100%;min-height:0;max-height:none} .side{display:block}.card{margin-bottom:12px} .stats{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.value{font-size:20px}.main-btn{padding:0 17px}.search-panel{padding:14px}.map-overlay{top:11px;left:11px} .source{font-size:10px}}
 /* Render standard OpenStreetMap tiles unfiltered. A filter on Leaflet's transformed tile pane can cause gaps in iOS Safari. */
-.map-reload{position:absolute;left:14px;bottom:21px;z-index:550;min-height:37px;background:#101f32ee;border:1px solid #42617b;border-radius:9px;color:#f0f8ff;padding:8px 11px;font-weight:700;font-size:12px}
+.map-reload,.map-style{position:absolute;bottom:21px;z-index:550;min-height:37px;background:#101f32ee;border:1px solid #42617b;border-radius:9px;color:#f0f8ff;padding:8px 11px;font-weight:700;font-size:12px}
+.map-reload{left:14px}.map-style{left:137px}
+.refresh-toggle{display:flex;align-items:center;gap:9px;color:#d7e9f4;font-size:12px;cursor:pointer}
+.refresh-toggle input{width:19px;height:19px;accent-color:var(--cyan)}
+@media(max-width:400px){.map-style{left:14px;bottom:68px}}
+
 .diagnostic-note {margin:-6px 0 15px;padding:10px 13px;font-size:13px;line-height:1.5;border:1px solid #43607c;border-radius:11px;background:#132b42;color:#dcecf6;}
 .diagnostic-note a{font-weight:800;color:#7fe6f6;text-decoration:underline;}
 </style>
 </head>
 <body><div class="page"><main class="shell">
 <div class="head"><div class="brand"><div class="logo" aria-hidden="true">✈</div><div><h1>Jack's Flight Tracker</h1><div class="sub">Find the airplane. Follow the flight.</div></div></div><div class="tag">PERSONAL FLIGHT RADAR</div></div>
-<section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Free no-key aircraft tracking. Checks every 60 seconds while open to respect provider limits (AvioADSB: 100 requests/day, shared by network; coverage varies).</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find flying plane to test</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div></section>
+<section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Nothing is checked when you open the app. Select a plane and tap Track for a one-time check. Automatic updates are optional.</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find flying plane to test</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div>
+<div class="test-tools tracker-control">
+  <button type="button" class="minor-btn" id="refreshPlaneBtn" disabled>↻ Check selected plane</button>
+  <button type="button" class="minor-btn" id="stopTrackingBtn" disabled>■ Stop tracking</button>
+  <label class="refresh-toggle"><input type="checkbox" id="autoRefreshToggle"> Auto-refresh selected plane (60 sec)</label>
+</div></section>
 <section class="library-panel" id="aircraftLibrary" aria-label="My saved aircraft">
  <div class="library-header"><div><h2>✈ My Aircraft</h2><p>Save planes, group them into your own categories, and track with one tap.</p></div>
  <button id="downloadLibrary" type="button">↓ Export backup</button></div>
@@ -42,9 +52,9 @@
  <p class="radar-tip">Do not enter an API key or payment information. <a href="https://github.com/joshuamaziarz1-ux/-jacks-flight-tracker/blob/main/radar-bridge/README.md" target="_blank" rel="noopener noreferrer" style="color:#88e6f5">Free radar bridge setup directions</a></p>
  </details>
  </section>
- <div class="status-bar"><div class="status" role="status" aria-live="polite"><span id="dot" class="dot"></span><span id="statusText">Ready to track Jack’s plane.</span></div><div class="source" id="updatedText">Not tracking</div></div>
+ <div class="status-bar"><div class="status" role="status" aria-live="polite"><span id="dot" class="dot"></span><span id="statusText">Ready. Select an aircraft to check its position.</span></div><div class="source" id="updatedText">No aircraft selected</div></div>
 <div id="radarDiagnostic" class="diagnostic-note hidden">Live radar is not responding. <a href="./radar-test.html">Run radar and map checks →</a> and send a screenshot of the results.</div>
-<div class="layout"><section class="map-wrap" aria-label="Aircraft map"><div id="map"></div><div class="map-overlay"><span aria-hidden="true">⌖</span><span id="mapLabel">Map ready</span></div><button class="map-reload" type="button" id="reloadMapBtn">↻ Reload map</button><button class="map-control" type="button" id="recenterBtn" disabled>⌖ Center on plane</button></section><aside class="side"><div class="card"><div class="card-label">Tracking</div><div id="tailDisplay" class="tail">N233ND</div><div id="typeDisplay" class="aircraft">Sweet Aviation • Diamond DA20-C1</div><div class="stats"><div><div class="card-label">Altitude</div><div id="altDisplay" class="value">—</div><div class="unit">feet</div></div><div><div class="card-label">Speed</div><div id="speedDisplay" class="value">—</div><div class="unit">mph (ground)</div></div><div><div class="card-label">Heading</div><div id="headingDisplay" class="value">—</div><div class="unit">degrees</div></div></div><div id="lastDisplay" class="last">Live details appear when the aircraft is broadcasting a position.</div></div><div class="card notice"><strong>Important</strong> — This follows the <strong>airplane</strong>, not Jack's phone. Aircraft can disappear from public tracking because of low altitude, receiver coverage, equipment, or privacy settings. Missing data is not an emergency indication. Do not use this app for flight safety decisions.</div></aside></div>
+<div class="layout"><section class="map-wrap" aria-label="Aircraft map"><div id="map"></div><div class="map-overlay"><span aria-hidden="true">⌖</span><span id="mapLabel">Fort Wayne area · No plane selected</span></div><button class="map-reload" type="button" id="reloadMapBtn">↻ Reload map</button><button class="map-style" type="button" id="mapStyleBtn">Map: Topo ▾</button><button class="map-control" type="button" id="recenterBtn" disabled>⌖ Center on plane</button></section><aside class="side"><div class="card"><div class="card-label">Aircraft details</div><div id="tailDisplay" class="tail">—</div><div id="typeDisplay" class="aircraft">Select a saved airplane or enter a tail number.</div><div class="stats"><div><div class="card-label">Altitude</div><div id="altDisplay" class="value">—</div><div class="unit">feet</div></div><div><div class="card-label">Speed</div><div id="speedDisplay" class="value">—</div><div class="unit">mph (ground)</div></div><div><div class="card-label">Heading</div><div id="headingDisplay" class="value">—</div><div class="unit">degrees</div></div></div><div id="lastDisplay" class="last">The app will not check any aircraft until you ask it to.</div></div><div class="card notice"><strong>Important</strong> — This follows the <strong>airplane</strong>, not Jack's phone. Aircraft can disappear from public tracking because of low altitude, receiver coverage, equipment, or privacy settings. Missing data is not an emergency indication. Do not use this app for flight safety decisions.</div></aside></div>
 <footer>Free aircraft data: AvioADSB (CC BY 4.0) and delayed <a href="https://www.adsb.lol/" target="_blank" rel="noopener noreferrer">adsb.lol</a> samples (ODbL 1.0) via GitHub. Snapshots update approximately every 5 minutes, and are NOT LIVE. No paid API key required. Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors,  No flight data is invented. Current-session track only.</footer>
 </main></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
@@ -60,11 +70,34 @@ const mapLabel = document.getElementById('mapLabel');
 const centerBtn = document.getElementById('recenterBtn');
 const testBtn = document.getElementById('testBtn');
 const backBtn = document.getElementById('backBtn');
+const refreshPlaneBtn=document.getElementById('refreshPlaneBtn');
+const stopTrackingBtn=document.getElementById('stopTrackingBtn');
+const autoRefreshToggle=document.getElementById('autoRefreshToggle');
 const map = L.map('map', {zoomControl:true,fadeAnimation:false,zoomAnimation:false}).setView([41.1,-85.15], 9);
-const mapTiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
- attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
- maxZoom:19,updateWhenIdle:false,keepBuffer:3
+// USGS Topo is a public U.S. government basemap. Streets uses OSM standard tiles.
+// Users can switch between the two if their browser has trouble loading a provider.
+const mapTiles=L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',{
+ attribution:'Tiles: <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map" target="_blank">USGS The National Map</a>',
+ maxZoom:16,updateWhenIdle:false,keepBuffer:2
 }).addTo(map);
+let activeMapStyle='topo';
+const mapStyleBtn=document.getElementById('mapStyleBtn');
+function chooseMapStyle(style){
+ activeMapStyle=style;
+ if(style==='streets'){
+   mapTiles.setUrl('https://tile.openstreetmap.org/{z}/{x}/{y}.png',false);
+   mapTiles.options.attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
+   mapTiles.options.maxZoom=19;
+   mapStyleBtn.textContent='Map: Streets ▾';
+ }else{
+   mapTiles.setUrl('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',false);
+   mapTiles.options.attribution='Tiles: <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map">USGS The National Map</a>';
+   mapTiles.options.maxZoom=16;
+   mapStyleBtn.textContent='Map: Topo ▾';
+ }
+ mapTiles.redraw();map.invalidateSize({pan:false,animate:false});
+}
+mapStyleBtn.addEventListener('click',()=>chooseMapStyle(activeMapStyle==='topo'?'streets':'topo'));
 // Mobile webviews often resize after Leaflet initializes, leaving empty squares.
 function syncMapSize(){if(!document.hidden)map.invalidateSize({pan:false,animate:false})}
 map.whenReady(()=>{setTimeout(syncMapSize,150);setTimeout(syncMapSize,650)});
@@ -232,14 +265,56 @@ async function update(){
  } else {showRadarDiagnostics(true);state(radarProblem(errors),'warn');updatedText.textContent='Connection unavailable';if(lastPosition){mapLabel.textContent='Last known position — not live';elt('lastDisplay','Connection failed — map position is not live.');}else {mapLabel.textContent='Live radar connection unavailable';elt('lastDisplay','Open the Radar Connection Test link above. No paid API key is required.');}}
  activeFetch=false;btn.disabled=false;
 }
-function begin(tail){
- if(!/^[A-Z0-9-]{2,12}$/.test(tail)){state('Enter a valid registration, such as N12345.','warn');input.focus();return;}
- requestSerial++;const changed=tail!==activeTail;activeTail=tail;
- if(changed){if(marker){map.removeLayer(marker);marker=null;}if(trail){map.removeLayer(trail);trail=null;}sessionPath=[];lastPosition=null;centerBtn.disabled=true;mapLabel.textContent='Finding '+tail+'…';elt('typeDisplay','Searching for live aircraft…');elt('altDisplay','—');elt('speedDisplay','—');elt('headingDisplay','—');elt('lastDisplay','Looking up current aircraft broadcasts…');}
- elt('tailDisplay',tail);state('Searching for '+tail+'…');
- backBtn.classList.toggle('hidden',tail===JACK_TAIL);
- if(timer)clearInterval(timer);timer=setInterval(update,60000);activeFetch=false;update();
+function setRefreshSchedule(){
+ if(timer){clearInterval(timer);timer=null;}
+ if(activeTail&&autoRefreshToggle.checked){
+   timer=setInterval(()=>{if(!document.hidden&&activeTail)update()},60000);
+ }
 }
+function clearTrack(){
+ requestSerial++;
+ activeTail='';
+ activeFetch=false;
+ if(timer){clearInterval(timer);timer=null;}
+ if(marker){map.removeLayer(marker);marker=null;}
+ if(trail){map.removeLayer(trail);trail=null;}
+ sessionPath=[];lastPosition=null;
+ centerBtn.disabled=true;refreshPlaneBtn.disabled=true;stopTrackingBtn.disabled=true;
+ btn.disabled=false;backBtn.classList.add('hidden');
+ mapLabel.textContent='Fort Wayne area · No plane selected';
+ elt('tailDisplay','—');elt('typeDisplay','Select an aircraft to check its position.');
+ elt('altDisplay','—');elt('speedDisplay','—');elt('headingDisplay','—');
+ elt('lastDisplay','No aircraft being tracked. Your saved airplanes are not checked automatically.');
+ updatedText.textContent='No aircraft selected';
+ state('Ready. Select an aircraft to check its position.');
+}
+function begin(tail){
+ tail=String(tail||'').trim().toUpperCase();
+ if(!/^[A-Z0-9-]{2,12}$/.test(tail)){
+   state('Enter a valid registration, such as N12345.','warn');input.focus();return;
+ }
+ requestSerial++;
+ const changed=tail!==activeTail;
+ activeTail=tail;
+ if(changed){
+   if(marker){map.removeLayer(marker);marker=null;}
+   if(trail){map.removeLayer(trail);trail=null;}
+   sessionPath=[];lastPosition=null;centerBtn.disabled=true;
+   mapLabel.textContent='Finding '+tail+'…';
+   elt('typeDisplay','Checking public aircraft reports…');
+   elt('altDisplay','—');elt('speedDisplay','—');elt('headingDisplay','—');
+   elt('lastDisplay','Looking up a reported position…');
+ }
+ elt('tailDisplay',tail);
+ state('Checking '+tail+'…');
+ updatedText.textContent='Checking now…';
+ refreshPlaneBtn.disabled=false;stopTrackingBtn.disabled=false;
+ backBtn.classList.toggle('hidden',tail===JACK_TAIL);
+ activeFetch=false;setRefreshSchedule();update();
+}
+refreshPlaneBtn.addEventListener('click',()=>{if(activeTail)update()});
+stopTrackingBtn.addEventListener('click',clearTrack);
+autoRefreshToggle.addEventListener('change',setRefreshSchedule);
 form.addEventListener('submit',e=>{e.preventDefault();begin(input.value.trim().toUpperCase().replace(/\s+/g,''));});
 centerBtn.addEventListener('click',()=>{if(lastPosition)map.setView(lastPosition,11,{animate:true});});
 backBtn.addEventListener('click',()=>{input.value=JACK_TAIL;begin(JACK_TAIL);});
@@ -281,7 +356,7 @@ async function findTestAircraft(){
  }finally {testSearching=false;testBtn.disabled=false;testBtn.textContent='✈ Find flying plane to test';}
 }
 testBtn.addEventListener('click',findTestAircraft);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){syncMapSize();if(activeTail)update();}});
-// Always return to Jack's airplane when opening the tracker.
-begin(JACK_TAIL);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncMapSize()});
+// Stay idle on startup. Saved airplanes are bookmarks, not automatic tracking targets.
+// Only begin(...) after a user explicitly clicks a Track or Find button.
 </script><script src="./saved-aircraft.js?v=1"></script></body></html>
