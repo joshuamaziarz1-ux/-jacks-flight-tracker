@@ -1,0 +1,36 @@
+name: Check ADSB.one for Fort Wayne
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/check-adsb-one.yml']
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Check free public flight source and browser CORS
+        run: |
+          python3 - <<'PY'
+          import urllib.request,urllib.error,json
+          urls=[
+            ('ADSB One GWB', 'https://api.adsb.one/v2/point/41.3072/-85.0605/30'),
+            ('ADSB One SMD', 'https://api.adsb.one/v2/point/41.14336/-85.15278/30'),
+            ('ADSB One FWA', 'https://api.adsb.one/v2/point/40.97847/-85.19517/30'),
+            ('Airplanes.live GWB','https://api.airplanes.live/v2/point/41.3072/-85.0605/30'),
+            ('AvioADSB GWB','https://avioadsb.org/v1/point/41.3072/-85.0605/30')
+          ]
+          for name,url in urls:
+            req=urllib.request.Request(url,headers={'Origin':'https://joshuamaziarz1-ux.github.io','Accept':'application/json'})
+            try:
+              with urllib.request.urlopen(req,timeout=12) as r:
+                data=json.load(r)
+                ac=data.get('ac',[])
+                print(name,'HTTP',r.status,'CORS',r.headers.get('Access-Control-Allow-Origin'),
+                  'aircraft',len(ac),'registered',sum(1 for p in ac if p.get('r')),
+                  'nearby samples',[(a.get('r'),a.get('alt_baro'),a.get('seen_pos')) for a in ac[:3]],flush=True)
+            except urllib.error.HTTPError as e:
+              print(name,'HTTP ERROR',e.code,'CORS',e.headers.get('Access-Control-Allow-Origin'),flush=True)
+            except Exception as e:
+              print(name,'ERROR',type(e).__name__,str(e)[:150],flush=True)
+          PY
