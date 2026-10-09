@@ -1,0 +1,39 @@
+name: N278DC live aircraft test
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/n278dc-check.yml
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Inspect live aircraft sources for N278DC
+        run: |
+          python3 - <<'PY'
+          import datetime, json, urllib.request, urllib.error
+          stamp=datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
+          print("Checked (UTC):",stamp)
+          urls=[
+            ("adsb.fi by registration", "https://opendata.adsb.fi/api/v2/registration/N278DC"),
+            ("adsb.lol by registration", "https://api.adsb.lol/v2/reg/N278DC"),
+            ("adsb.fi by ICAO", "https://opendata.adsb.fi/api/v2/icao/A2C482"),
+            ("adsb.lol by ICAO", "https://api.adsb.lol/v2/icao/A2C482"),
+          ]
+          for label,url in urls:
+            print("\\nSource:",label)
+            try:
+              req=urllib.request.Request(url, headers={"User-Agent":"JackFlightTrackerPersonalTest/1.0","Accept":"application/json"})
+              with urllib.request.urlopen(req,timeout=12) as response:
+                status=response.status
+                obj=json.load(response)
+              planes=obj.get("ac",[])
+              print("HTTP",status,"matches",len(planes),"sourceTime",obj.get("now"))
+              for p in planes[:3]:
+                brief={k:p.get(k) for k in ["r","hex","flight","lat","lon","alt_baro","gs","track","seen","seen_pos","t"]}
+                print("plane:",json.dumps(brief,sort_keys=True))
+            except Exception as e:
+              print("Error:",type(e).__name__,str(e)[:200])
+          PY
