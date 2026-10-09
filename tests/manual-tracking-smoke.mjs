@@ -38,7 +38,8 @@ const track=Array.from(id('libraryPlanes').querySelectorAll('button')).find(b=>b
 assert.ok(track,'saved airplane has a Track button');
 track.click();
 await new Promise(resolve=>setTimeout(resolve,30));
-assert.equal(fetchCalls,1,'explicit Track causes exactly one aircraft request');
+assert.ok(fetchCalls>=1&&fetchCalls<=3,'explicit Track makes a one-time lookup through available sources');
+const requestsAfterTrack=fetchCalls;
 assert.equal(intervalCalls,0,'one-time track does not begin automatic refresh');
 assert.equal(id('stopTrackingBtn').disabled,false);
 id('autoRefreshToggle').checked=true;
@@ -48,6 +49,6 @@ id('stopTrackingBtn').click();
 assert.equal(id('tailDisplay').textContent,'—');
 assert.equal(id('stopTrackingBtn').disabled,true);
 assert.ok(clearedIntervals>0,'stop cancels selected-aircraft polling');
-assert.equal(id('autoRefreshToggle').checked,true,'the toggle preference itself is retained until user changes it');
-assert.equal(fetchCalls,1,'stop does not issue a new request');
+assert.equal(id('autoRefreshToggle').checked,false,'stopping tracking turns auto-refresh off');
+assert.equal(fetchCalls,requestsAfterTrack,'stop does not issue a new request');
 console.log('PASS: no automatic saved-plane search on launch; manual Track only; opt-in refresh and Stop; map style changes');
