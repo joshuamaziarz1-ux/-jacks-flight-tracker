@@ -15,7 +15,7 @@ w.fetch=async()=>{
 };
 w.setInterval=()=>{intervalCalls++;return intervalCalls};
 w.clearInterval=()=>{clearedIntervals++};
-const map={setView(){return this},whenReady(cb){cb()},invalidateSize(){},removeLayer(){removedLayers++},panTo(){}};
+const map={setView(){return this},whenReady(cb){cb()},invalidateSize(){},removeLayer(){removedLayers++},panTo(){},changeStyle(){}};
 function layer(){return {addTo(){return this},on(){return this},redraw(){},setUrl(){}}}
 w.L={map:()=>map,tileLayer:()=>layer(),marker:()=>layer(),polyline:()=>layer(),divIcon:()=>({})};
 // Both scripts share one page's lexical environment in a browser.
@@ -30,10 +30,10 @@ assert.equal(id('tailDisplay').textContent,'—','no default selected aircraft')
 assert.ok(id('statusText').textContent.includes('Select'));
 assert.ok(id('libraryPlanes').textContent.includes('N233ND'));
 assert.ok(id('libraryPlanes').textContent.includes('N278DC'));
-assert.equal(id('mapStyleBtn').textContent,'Map: Topo ▾');
+assert.equal(id('mapStyleBtn').textContent,'Map: Dark ▾');
 id('mapStyleBtn').click();
 assert.equal(id('mapStyleBtn').textContent,'Map: Streets ▾');
-assert.equal(removedLayers,1);
+assert.equal(removedLayers,0,'vector map changes style without removing markers');
 const track=Array.from(id('libraryPlanes').querySelectorAll('button')).find(b=>b.textContent==='Track');
 assert.ok(track,'saved airplane has a Track button');
 track.click();
