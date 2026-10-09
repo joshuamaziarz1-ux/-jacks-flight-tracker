@@ -52,13 +52,19 @@ try {
  const status=await page.locator('#statusText').innerText();
  console.log('Demo mode:',status);
  assert.ok(status.includes('DEMO MODE')&&status.includes('NOT A REAL AIRCRAFT'));
- const startPoint=await page.evaluate(()=>marker.marker.getLngLat().toArray());
- await page.waitForTimeout(1200);
- const nextPoint=await page.evaluate(()=>marker.marker.getLngLat().toArray());
- const traveledMeters=Math.hypot((nextPoint[0]-startPoint[0])*111195*Math.cos(startPoint[1]*Math.PI/180),
-   (nextPoint[1]-startPoint[1])*111195);
- console.log('Simulated airplane traveled',traveledMeters.toFixed(1),'meters in 1.2 seconds');
- assert.ok(traveledMeters>=15&&traveledMeters<=125,'demo should advance smoothly near real training-plane speeds, not jump miles');
+ // Headless WebKit may throttle animation frames. Simulate the passage of
+ // 1.2 seconds directly and verify distance is based on elapsed time.
+ const traveledMeters=await page.evaluate(()=>{
+   const start=marker.marker.getLngLat().toArray();
+   cancelAnimationFrame(demoTimer);
+   demoTimer=null;
+   renderDemoFrame(demoLastFrame+1200);
+   const end=marker.marker.getLngLat().toArray();
+   return Math.hypot((end[0]-start[0])*111195*Math.cos(start[1]*Math.PI/180),
+     (end[1]-start[1])*111195);
+ });
+ console.log('Simulated airplane advanced',traveledMeters.toFixed(1),'meters per elapsed 1.2 seconds');
+ assert.ok(traveledMeters>=25&&traveledMeters<=85,'simulated aircraft should advance at realistic airspeed per elapsed time');
  assert.equal((await page.locator('#tailDisplay').innerText()),'DEMO');
  await page.screenshot({path:'webkit-tracker-demo.png',fullPage:false});
  await page.click('#stopTrackingBtn');
