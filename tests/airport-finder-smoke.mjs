@@ -44,6 +44,9 @@ byId('radarRadius').value='50';
 byId('radarRadius').dispatchEvent(new w.Event('change',{bubbles:true}));
 assert.equal(requests,1,'changing radius does not make an API call');
 assert.equal(byId('nearbyResults').children.length,0,'changing radius clears old results');
+// Advance the free provider's last-request timestamp in the test only. The
+// production app still enforces its 11-second minimum interval.
+w.eval('lastAvioCall = Date.now() - 11000');
 byId('testBtn').click();
 await new Promise(resolve=>setTimeout(resolve,140));
 assert.equal(byId('nearbyResults').querySelectorAll('.nearby-row').length,2,'50nm radius excludes more distant airplane');
