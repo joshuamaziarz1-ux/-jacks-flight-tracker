@@ -71,6 +71,35 @@ try {
  assert.ok((await page.locator('#statusText').innerText()).includes('Ready.'));
  const positionAfterStop=await page.evaluate(()=>typeof marker==='object'&&marker!==null);
  assert.equal(positionAfterStop,false,'stop clears demo marker and cancels the animation');
+ // Airport-specific real aircraft lookup: external service response is mocked,
+ // so tests verify UI behavior without pretending there are live planes now.
+ await page.route('https://avioadsb.org/v1/point/**',route=>route.fulfill({
+   status:200,contentType:'application/json',
+   body:JSON.stringify({ac:[
+     {r:'N9123A',hex:'a34567',lat:41.146,lon:-85.15,gs:83,alt_baro:2500,track:90,seen_pos:3,t:'C172'},
+     {r:'N278DC',hex:'a2c482',lat:41.306,lon:-85.061,gs:65,alt_baro:1000,track:100,seen_pos:4,t:'DV20'},
+     {r:'N99999',hex:'aaaaaa',lat:42.55,lon:-87.2,gs:100,alt_baro:3200,track:60,seen_pos:2,t:'C172'}
+   ]})
+ }));
+ await page.click('[data-airport="SMD"]');
+ assert.equal(await page.locator('[data-airport="SMD"]').getAttribute('aria-pressed'),'true');
+ assert.ok((await page.locator('#outsideRadar').getAttribute('href')).includes('41.1433611'));
+ assert.equal(await page.locator('#nearbyResults .nearby-row').count(),0,'airport switch must not search automatically');
+ await page.click('#testBtn');
+ await page.waitForSelector('#nearbyResults .nearby-row',{timeout:12000});
+ assert.equal(await page.locator('#nearbyResults .nearby-row').count(),2,'nearby real aircraft are filtered to selected airport');
+ assert.ok((await page.locator('#nearbyResults').innerText()).includes('KSMD'));
+ await page.locator('#nearbyResults .nearby-row').first().getByRole('button',{name:'Track →'}).click();
+ assert.equal((await page.locator('#tailDisplay').innerText()),'N9123A');
+ assert.ok((await page.locator('#statusText').innerText()).includes('RECENT PUBLIC RADAR'));
+ assert.ok((await page.locator('#mapLabel').innerText()).includes('Reported aircraft'));
+ assert.equal(await page.locator('#autoRefreshToggle').isChecked(),false,'tracking must not auto-poll saved aircraft');
+ await page.screenshot({path:'webkit-tracker-near-smith-field.png',fullPage:false});
+ await page.click('#stopTrackingBtn');
+ await page.click('[data-airport="GWB"]');
+ assert.ok((await page.locator('#nearbyHint').innerText()).includes('DeKalb County Airport'));
+ assert.equal(await page.locator('#nearbyResults .nearby-row').count(),0);
+ console.log('PASS DeKalb and Smith Field airport selection, real-position list, manual tracking, no auto-poll.');
  if(errors.length)console.log('Browser console observations',errors.slice(0,10).join(' || '));
  console.log('PASS iPhone-sized WebKit: vector map, both styles, idle startup and test flight.');
 }finally {
