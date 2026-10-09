@@ -25,7 +25,7 @@
 </head>
 <body><div class="page"><main class="shell">
 <div class="head"><div class="brand"><div class="logo" aria-hidden="true">✈</div><div><h1>Jack's Flight Tracker</h1><div class="sub">Find the airplane. Follow the flight.</div></div></div><div class="tag">PERSONAL FLIGHT RADAR</div></div>
-<section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Nothing is checked when you open the app. Track is manual. Find Plane / Test Map shows a recent aircraft report or a clearly marked simulated flight.</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find Plane / Test Map</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div>
+<section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Nothing is checked when the app opens. Find nearby real plane shows actual reported positions when available; Preview smooth demo is simulated, not live data.</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find nearby real plane</button><button type="button" class="minor-btn" id="demoBtn">▶ Preview smooth demo</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div>
 <div class="test-tools tracker-control">
   <button type="button" class="minor-btn" id="refreshPlaneBtn" disabled>↻ Check selected plane</button>
   <button type="button" class="minor-btn" id="stopTrackingBtn" disabled>■ Stop tracking</button>
@@ -263,7 +263,7 @@ function setRefreshSchedule(){
  }
 }
 function clearTrack(){
- if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
+ if(demoTimer!==null){cancelAnimationFrame(demoTimer);demoTimer=null;}
  requestSerial++;
  activeTail='';
  activeFetch=false;
@@ -282,7 +282,7 @@ function clearTrack(){
  state('Ready. Select an aircraft to check its position.');
 }
 function begin(tail){
- if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
+ if(demoTimer!==null){cancelAnimationFrame(demoTimer);demoTimer=null;}
  tail=String(tail||'').trim().toUpperCase();
  if(!/^[A-Z0-9-]{2,12}$/.test(tail)){
    state('Enter a valid registration, such as N12345.','warn');input.focus();return;
@@ -312,38 +312,102 @@ autoRefreshToggle.addEventListener('change',setRefreshSchedule);
 form.addEventListener('submit',e=>{e.preventDefault();begin(input.value.trim().toUpperCase().replace(/\s+/g,''));});
 centerBtn.addEventListener('click',()=>{if(lastPosition)map.setView(lastPosition,11,{animate:true});});
 backBtn.addEventListener('click',()=>{input.value=JACK_TAIL;begin(JACK_TAIL);});
-// Test is always usable. Prefer a recently OBSERVED real airplane;
-// if no recent receiver data exists, render an unmistakable simulation.
+// Smooth, true-to-clock SIMULATION, not real-time aircraft tracking.
+// requestAnimationFrame gives fluid movement; distance advances at ~85 knots.
+// The coordinates are invented for map testing and are ALWAYS marked DEMO.
 const demoSteps=[
-  [41.090,-85.200,2100,84,80],[41.105,-85.177,2350,91,74],
-  [41.125,-85.135,2650,96,67],[41.145,-85.095,2900,98,60],
-  [41.166,-85.060,3150,97,49],[41.194,-85.025,3350,92,35],
-  [41.222,-85.000,3500,88,22],[41.251,-84.990,3400,85,7],
-  [41.278,-84.995,3100,82,345],[41.304,-85.014,2780,78,320]
+  [41.090,-85.200,2100,84],[41.105,-85.177,2350,91],
+  [41.125,-85.135,2650,96],[41.145,-85.095,2900,98],
+  [41.166,-85.060,3150,97],[41.194,-85.025,3350,92],
+  [41.222,-85.000,3500,88],[41.251,-84.990,3400,85],
+  [41.278,-84.995,3100,82],[41.304,-85.014,2780,78]
 ];
-let demoStep=0;
-function demoTick(){
- const p=demoSteps[demoStep%demoSteps.length];demoStep++;
- const sample={r:'DEMO',flight:'SIMULATION',t:'Training aircraft (demo)',
-   lat:p[0],lon:p[1],alt_baro:p[2],gs:p[3],track:p[4],seen_pos:0};
- details(sample,true);
- position(sample,0);
- state('DEMO MODE — simulated flight, NOT A REAL AIRCRAFT','warn');
- mapLabel.textContent='DEMO SIMULATION — NOT LIVE';
- elt('lastDisplay','Simulated position. This airplane is not real; demo is for testing the map.');
- updatedText.textContent='DEMO · simulated motion';
+const demoRoute=demoSteps.map((p,i)=>{
+ const next=demoSteps[Math.min(i+1,demoSteps.length-1)];
+ const mid=(p[0]+next[0])*Math.PI/360;
+ const north=(next[0]-p[0])*111195,east=(next[1]-p[1])*111195*Math.cos(mid);
+ return {start:p,end:next,length:Math.hypot(north,east),
+   bearing:(Math.atan2(east,north)*180/Math.PI+360)%360};
+});
+let demoSegment=0,demoDistance=0,demoClock=0,demoLastFrame=0,demoLastPoint=0,demoLastStats=0;
+function renderDemoFrame(now){
+ if(activeTail!=='DEMO')return;
+ const delta=demoLastFrame?Math.min(.12,Math.max(0,(now-demoLastFrame)/1000)):0;
+ demoLastFrame=now;
+ demoClock+=delta;
+ // Advance distance at the training airplane's published simulation speed.
+ let travel=delta*(demoSteps[Math.min(demoSegment,demoSteps.length-1)][3]||84)*.514444;
+ while(travel>0){
+   const section=demoRoute[demoSegment];
+   const remaining=section.length-demoDistance;
+   if(remaining<=travel){
+     travel-=remaining;
+     demoSegment=(demoSegment+1)%(demoRoute.length-1);
+     demoDistance=0;
+     if(trail&&demoSegment===0){map.removeLayer(trail);trail=null;sessionPath=[];}
+   }else{
+     demoDistance+=travel;travel=0;
+   }
+ }
+ const part=demoRoute[demoSegment],ratio=Math.min(1,demoDistance/Math.max(1,part.length));
+ const lat=part.start[0]+(part.end[0]-part.start[0])*ratio;
+ const lon=part.start[1]+(part.end[1]-part.start[1])*ratio;
+ const alt=Math.round(part.start[2]+(part.end[2]-part.start[2])*ratio);
+ const speed=Math.round(part.start[3]+(part.end[3]-part.start[3])*ratio);
+ const ll=[lat,lon];
+ // Throttle DOM/map marker changes to ~12fps, while the time-based
+ // interpolation keeps the speed stable regardless of frame rate.
+ if(!marker){
+   marker=L.marker(ll,{icon:planeIcon(part.bearing)}).addTo(map).bindPopup('SIMULATED DEMO FLIGHT');
+   map.setView(ll,11);
+   centerBtn.disabled=false;
+ }
+ if(now-demoLastPoint>80){
+   marker.setLatLng(ll);
+   marker.setIcon(planeIcon(part.bearing));
+   lastPosition=ll;
+   demoLastPoint=now;
+   if(!sessionPath.length || demoClock-(renderDemoFrame.lastTrailTime||0)>1.4){
+     sessionPath.push(ll);
+     if(sessionPath.length>500)sessionPath.shift();
+     if(!trail)trail=L.polyline(sessionPath,{color:'#59d5e7',weight:3,opacity:.75}).addTo(map);
+     else trail.setLatLngs(sessionPath);
+     renderDemoFrame.lastTrailTime=demoClock;
+   }
+   if(demoClock-(renderDemoFrame.lastCameraTime||0)>3){
+     map.panTo(ll);
+     renderDemoFrame.lastCameraTime=demoClock;
+   }
+ }
+ if(now-demoLastStats>900){
+   elt('tailDisplay','DEMO');
+   elt('typeDisplay','SIMULATION • training-aircraft preview');
+   elt('altDisplay',formatNumber(alt));
+   elt('speedDisplay',formatNumber(speed*1.15078));
+   elt('headingDisplay',formatNumber(part.bearing)+'°');
+   demoLastStats=now;
+ }
+ demoTimer=requestAnimationFrame(renderDemoFrame);
 }
 function startDemoFlight(){
  clearTrack();
  activeTail='DEMO';
- demoStep=0;
+ demoSegment=0;demoDistance=0;demoClock=0;
+ demoLastFrame=0;demoLastPoint=0;demoLastStats=0;
+ renderDemoFrame.lastTrailTime=0;
+ renderDemoFrame.lastCameraTime=0;
  stopTrackingBtn.disabled=false;
  refreshPlaneBtn.disabled=true;
  autoRefreshToggle.checked=false;
  backBtn.classList.add('hidden');
  input.value=JACK_TAIL;
- demoTick();
- demoTimer=setInterval(demoTick,6500);
+ state('DEMO MODE — smooth simulated flight, NOT A REAL AIRCRAFT','warn');
+ mapLabel.textContent='DEMO SIMULATION — NOT LIVE';
+ elt('tailDisplay','DEMO');
+ elt('typeDisplay','SIMULATION • training-aircraft preview');
+ elt('lastDisplay','This is a time-based simulation at training-aircraft speeds. It does NOT show any real plane.');
+ updatedText.textContent='DEMO · no live flight data';
+ renderDemoFrame(performance.now());
 }
 function showObservedTestPlane(record,source){
  clearTrack();
@@ -362,7 +426,7 @@ function showObservedTestPlane(record,source){
 }
 async function findTestAircraft(){
  if(testSearching)return;
- if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
+ if(demoTimer!==null){cancelAnimationFrame(demoTimer);demoTimer=null;}
  testSearching=true;testBtn.disabled=true;testBtn.textContent='Looking for recent aircraft…';
  state('Checking for a recent airplane position near Fort Wayne…');
  let candidates=[],chosenSource='';
@@ -392,13 +456,14 @@ async function findTestAircraft(){
      // Show the position we already fetched, avoiding a second slow API query.
      showObservedTestPlane(chosen,chosenSource);
    }else{
-     startDemoFlight();
+     state('No recent real-aircraft reports. Use Preview smooth demo to test the map.','warn');
    }
  }finally{
-   testSearching=false;testBtn.disabled=false;testBtn.textContent='✈ Find Plane / Test Map';
+   testSearching=false;testBtn.disabled=false;testBtn.textContent='✈ Find nearby real plane';
  }
 }
 testBtn.addEventListener('click',findTestAircraft);
+document.getElementById('demoBtn').addEventListener('click',startDemoFlight);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncMapSize()});
 // Stay idle on startup. Saved airplanes are bookmarks, not automatic tracking targets.
 // Only begin(...) after a user explicitly clicks a Track or Find button.
