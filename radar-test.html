@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#08121f">
+<title>Jack's Radar — Connection Test</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif}
+*{box-sizing:border-box}body{background:#071422;color:#e9f5ff;margin:0;padding:22px}
+main{max-width:640px;margin:0 auto}
+h1{font-size:25px;margin:12px 0 8px}.small{color:#acc1d5;font-size:14px;line-height:1.5}
+.panel{border:1px solid #34516b;background:#112337;padding:15px;border-radius:14px;margin:15px 0}
+h2{font-size:15px;margin:0 0 8px}.status{font-size:14px;font-weight:700}
+.good{color:#80e6ad}.bad{color:#ffb9a8}.warn{color:#f4d38f}
+.detail{color:#bdcfe0;font-size:12px;line-height:1.6;margin-top:7px;overflow-wrap:anywhere}
+a{color:#7fe4f9;overflow-wrap:anywhere}button{background:#59d5e7;color:#0b2231;border:0;border-radius:10px;padding:12px 15px;font-size:15px;font-weight:800}
+</style>
+</head>
+<body><main>
+<h1>✈ Jack's Radar Connection Test</h1>
+<p class="small">This checks your free Cloudflare radar bridge and map tiles from the same browser as Jack's Flight Tracker. Nothing is stored or changed. No API key needed.</p>
+<button id="run" type="button">Run checks again</button>
+<div class="panel"><h2>1. Cloudflare connection</h2><div id="health" class="status">Waiting…</div><div id="healthDetail" class="detail"></div></div>
+<div class="panel"><h2>2. N278DC aircraft feed</h2><div id="aircraft" class="status">Waiting…</div><div id="aircraftDetail" class="detail"></div></div>
+<div class="panel"><h2>3. Fort Wayne aircraft search</h2><div id="nearby" class="status">Waiting…</div><div id="nearbyDetail" class="detail"></div></div>
+<div class="panel"><h2>4. Map tiles</h2><div id="tiles" class="status">Waiting…</div><div id="tilesDetail" class="detail"></div></div>
+<p class="small"><strong>If a check fails:</strong> send a screenshot of this page. If the Cloudflare connection shows a network/CORS error, also open the direct <a href="https://jacks-radar.joshua-maziarz1.workers.dev/health" target="_blank" rel="noopener">radar health link</a>.</p>
+<a href="./">← Back to Jack's Flight Tracker</a>
+</main>
+<script>
+'use strict';
+const BASE='https://jacks-radar.joshua-maziarz1.workers.dev';
+function result(id,label,detail,level){
+ const el=document.getElementById(id);
+ el.className='status '+level;
+ el.textContent=label;
+ document.getElementById(id+'Detail').textContent=detail;
+}
+async function check(id,path){
+ result(id,'Checking…','', 'warn');
+ try{
+   const res=await fetch(BASE+path,{cache:'no-store',signal:AbortSignal.timeout(14000)});
+   const body=await res.text();
+   let data;try{data=JSON.parse(body)}catch(_){}
+   if(!res.ok){
+     result(id,'HTTP '+res.status+' — error',data?.error||body.slice(0,180)||res.statusText,'bad');return;
+   }
+   if(id==='health'){
+     const good=data?.service==='jacks-flight-tracker-radar';
+     result(id,good?'Connected ✓':'Unexpected health response',
+       good?'Cloudflare Worker responding and CORS is allowed from this browser.':'Received HTTP 200, but not our radar service.',good?'good':'bad');
+     return;
+   }
+   if(!Array.isArray(data?.ac)){
+     result(id,'Unexpected response','The aircraft feed did not return an aircraft array.', 'bad');return;
+   }
+   if(id==='aircraft'){
+     const ac=data.ac.find(a=>a.r==='N278DC');
+     result(id,ac?'N278DC data received ✓':'Feed working — N278DC not visible',
+       ac?'Position: '+[ac.lat,ac.lon].join(', ')+' · last signal '+(ac.seen_pos??'?')+' seconds ago · '+(data.source||'public data'):'The connection worked, but this plane may not be flying now. Provider: '+(data.source||'public data'),
+       ac?'good':'warn');
+   }else {
+     result(id,'Feed connected ✓ — '+data.ac.length+' aircraft',
+       'Free data provider: '+(data.source||'public data')+'. Counts reflect public receiver coverage.', 'good');
+   }
+ }catch(error){
+   result(id,'Connection failed',String(error?.message||error)+'. The browser may be blocked, or the server may be unavailable.','bad');
+ }
+}
+function tileTest(){
+ result('tiles','Loading map tile…','','warn');
+ const image=new Image();
+ const timer=setTimeout(()=>{image.src='';result('tiles','Map tile timed out','The map server is slow or blocked from this browser.','bad')},12000);
+ image.onload=()=>{clearTimeout(timer);result('tiles','Map tile loaded ✓','OpenStreetMap tiles can be reached from your browser. Blank squares may be a map resizing or intermittent connection issue.','good')};
+ image.onerror=()=>{clearTimeout(timer);result('tiles','Map tile unavailable','The current OpenStreetMap tile service may be blocking or failing requests.','bad')};
+ image.src='https://tile.openstreetmap.org/7/33/47.png';
+}
+async function run(){
+ document.getElementById('run').disabled=true;
+ const calls=[check('health','/health'),check('aircraft','/api/aircraft/N278DC'),check('nearby','/api/nearby')];
+ tileTest();
+ await Promise.all(calls);
+ document.getElementById('run').disabled=false;
+}
+document.getElementById('run').addEventListener('click',run);
+run();
+</script></body></html>
