@@ -1,0 +1,29 @@
+name: GitHub Snapshot Feasibility
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/snapshot-feasibility.yml']
+jobs:
+  feasibility:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check ADSB.lol personal API and raw GitHub CORS
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import urllib.request,urllib.error,json
+          for name,url in [
+              ('ADSB.lol Fort Wayne','https://api.adsb.lol/v2/point/41.13/-85.14/125'),
+              ('GitHub RAW CORS','https://raw.githubusercontent.com/joshuamaziarz1-ux/-jacks-flight-tracker/main/index.html')
+          ]:
+            req=urllib.request.Request(url,headers={'Accept':'application/json','Origin':'https://joshuamaziarz1-ux.github.io'})
+            try:
+              with urllib.request.urlopen(req,timeout=18) as resp:
+                print(name,'HTTP',resp.status,'CORS',resp.headers.get('access-control-allow-origin'),'Type',resp.headers.get('content-type'))
+                if name.startswith('ADSB'):
+                  data=json.load(resp)
+                  print('Count',len(data.get('ac',[])),'matched sample',[(x.get('r'),x.get('hex')) for x in data.get('ac',[]) if x.get('r') in ('N233ND','N278DC')])
+            except Exception as exc:
+              print(name,type(exc).__name__,str(exc)[:120])
+          PY
