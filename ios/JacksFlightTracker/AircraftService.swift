@@ -32,30 +32,56 @@ enum FlightDataError: LocalizedError {
 }
 
 struct AircraftService {
-    private let apiBase = "https://api.adsb.lol"
+    // Community-operated feeds. Each source currently permits personal,
+    // non-commercial use without an API key. Respect their rate limits.
+    private let registrationEndpoints = [
+        "https://opendata.adsb.fi/api/v2/registration/",
+        "https://api.adsb.lol/v2/reg/"
+    ]
+    private let nearbyEndpoints = [
+        "https://opendata.adsb.fi/api/v3/lat/41.13/lon/-85.14/dist/125",
+        "https://api.adsb.lol/v2/point/41.13/-85.14/125"
+    ]
 
     func lookUp(registration: String) async throws -> TrackedAircraft? {
         let safe = registration.uppercased().filter { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") }
-        guard safe == registration.uppercased(), !safe.isEmpty,
-              let url = URL(string: "\(apiBase)/v2/reg/\(safe)") else {
+        guard safe == registration.uppercased(), !safe.isEmpty else {
             throw FlightDataError.badResponse
         }
-        let planes = try await fetch(url)
-        return planes.first { $0.registration.caseInsensitiveCompare(safe) == .orderedSame }
-            ?? planes.first
+        var reachedAnyProvider = false
+        for prefix in registrationEndpoints {
+            guard let url = URL(string: prefix + safe) else { continue }
+            do {
+                let planes = try await fetch(url)
+                reachedAnyProvider = true
+                if let match = planes.first(where: { $0.registration.caseInsensitiveCompare(safe) == .orderedSame }) {
+                    return match
+                }
+            } catch {
+                continue // Try another free provider if this service is unavailable.
+            }
+        }
+        if reachedAnyProvider { return nil }
+        throw FlightDataError.badResponse
     }
 
     func findAirborneNearFortWayne() async throws -> TrackedAircraft {
-        // Radius is in nautical miles. This covers Fort Wayne and DeKalb airports.
-        guard let url = URL(string: "\(apiBase)/v2/lat/41.13/lon/-85.14/dist/125") else {
-            throw FlightDataError.badResponse
+        var reachedAnyProvider = false
+        for endpoint in nearbyEndpoints {
+            guard let url = URL(string: endpoint) else { continue }
+            do {
+                let candidates = try await fetch(url)
+                    .filter { !$0.isOnGround && $0.isLive && !$0.registration.isEmpty }
+                reachedAnyProvider = true
+                if let airplane = candidates.sorted(by: { $0.positionAge < $1.positionAge }).first {
+                    return airplane
+                }
+            } catch {
+                continue // Fallback to another no-key data source.
+            }
         }
-        let candidates = try await fetch(url)
-            .filter { !$0.isOnGround && $0.isLive && !$0.registration.isEmpty }
-        guard let airplane = candidates.sorted(by: { $0.positionAge < $1.positionAge }).first else {
-            throw FlightDataError.noTestAircraft
-        }
-        return airplane
+        if reachedAnyProvider { throw FlightDataError.noTestAircraft }
+        throw FlightDataError.badResponse
     }
 
     private func fetch(_ url: URL) async throws -> [TrackedAircraft] {
@@ -69,7 +95,9 @@ struct AircraftService {
               let items = body["ac"] as? [[String: Any]] else {
             throw FlightDataError.malformedResponse
         }
-        let now = number(body["now"]) ?? Date().timeIntervalSince1970
+        let serverTime = number(body["now"]) ?? Date().timeIntervalSince1970
+        // ADS-B-compatible APIs differ: now may be epoch seconds or milliseconds.
+        let now = serverTime > 10_000_000_000 ? serverTime / 1000 : serverTime
         return items.compactMap { item -> TrackedAircraft? in
             guard let lat = number(item["lat"]), let lon = number(item["lon"]),
                   (-90...90).contains(lat), (-180...180).contains(lon) else { return nil }
