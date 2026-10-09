@@ -35,7 +35,9 @@ async function readUpstream(url){
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),8000);
   try{
-    const res=await fetch(url,{headers:{'Accept':'application/json','User-Agent':'JacksFlightTrackerPersonalUse/1.0'},signal:controller.signal,cf:{cacheTtl:15,cacheEverything:true}});
+    // Cloudflare caches responses on our own Worker. Keep upstream fetch plain:
+    // some flight-data gateways reject Cloudflare-specific cache options/headers.
+    const res=await fetch(url,{headers:{'Accept':'application/json'},signal:controller.signal});
     if(!res.ok)throw Error('upstream HTTP '+res.status);
     const data=await res.json();
     if(!data||!Array.isArray(data.ac))throw Error('Unexpected upstream data');
@@ -69,6 +71,32 @@ async function nearby(){
   if(received)return {ac:[],source:'public data',now:Date.now(),total:0};
   throw Error('Free aircraft providers temporarily unavailable');
 }
+// Safe diagnostic: fixed public URLs only, no arbitrary proxy URLs or secrets.
+async function upstreamDiagnostics(){
+  const results=[];
+  const checks=[
+    {name:'adsb.fi',url:'https://opendata.adsb.fi/api/v2/registration/N278DC'},
+    {name:'adsb.lol',url:'https://api.adsb.lol/v2/reg/N278DC'}
+  ];
+  for(const check of checks){
+    const controller=new AbortController();
+    const timer=setTimeout(()=>controller.abort(),7000);
+    try{
+      const r=await fetch(check.url,{headers:{Accept:'application/json'},signal:controller.signal});
+      const type=r.headers.get('content-type')||'';
+      let format='unknown';
+      try {
+        const text=await r.text();
+        const parsed=JSON.parse(text);
+        format=Array.isArray(parsed.ac)?'aircraft-json':'other-json';
+      } catch (_) {format='not-json'}
+      results.push({source:check.name,status:r.status,format});
+    }catch(err){
+      results.push({source:check.name,error:err?.name==='AbortError'?'timeout':String(err?.message||err).slice(0,140)});
+    }finally{clearTimeout(timer)}
+  }
+  return results;
+}
 export default {
   async fetch(request,env,ctx){
     const url=new URL(request.url);
@@ -79,6 +107,10 @@ export default {
     if(request.method!=='GET')return response(request,{error:'Only GET requests supported'},405);
     if(!isFromOurWebsite(request))return response(request,{error:'Origin not allowed'},403);
     if(url.pathname==='/health')return response(request,{service:'jacks-flight-tracker-radar',status:'ready',cost:'free',keyRequired:false});
+    if(url.pathname==='/diagnostics')return response(request,{
+      service:'jacks-flight-tracker-radar',checks:await upstreamDiagnostics(),
+      description:'Tests only whether upstream public data feeds can be read from this Cloudflare Worker.'
+    });
     const tailMatch=/^\/api\/aircraft\/([A-Za-z0-9-]{2,12})$/.exec(url.pathname);
     if(!tailMatch&&url.pathname!=='/api/nearby')return response(request,{error:'Route not found'},404);
     const cache=caches.default;
