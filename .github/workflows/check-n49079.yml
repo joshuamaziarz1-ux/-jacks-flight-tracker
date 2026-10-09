@@ -15,6 +15,8 @@ jobs:
           import urllib.request,urllib.error,json
           sources=[
             ('ADSB.lol registration','https://api.adsb.lol/v2/reg/N49079'),
+            ('ADSB.lol by hex','https://api.adsb.lol/v2/hex/A61387'),
+            ('OpenSky by hex','https://opensky-network.org/api/states/all?icao24=a61387'),
             ('ADSB.lol 125nm DeKalb','https://api.adsb.lol/v2/point/41.3072/-85.0605/125'),
             ('Airplanes.live registration','https://api.airplanes.live/v2/reg/N49079'),
             ('AvioADSB registration','https://avioadsb.org/v1/reg/N49079'),
@@ -26,8 +28,9 @@ jobs:
               with urllib.request.urlopen(req,timeout=15) as resp:
                 data=json.load(resp)
                 ac=data.get('ac',[]) if isinstance(data,dict) else []
+                states=data.get('states') if isinstance(data,dict) else None
                 target=[{k:v for k,v in a.items() if k in ('r','hex','lat','lon','seen_pos','alt_baro','gs','type','t','flight')} for a in ac if str(a.get('r') or '').upper()=='N49079']
-                print(label,'HTTP',resp.status,'TOTAL',len(ac),'N49079',json.dumps(target[:3]),'Registry',json.dumps(data.get('response',{}).get('aircraft',{}))[:350] if isinstance(data,dict) and label.startswith('ADSBdb') else '',flush=True)
+                print(label,'HTTP',resp.status,'TOTAL',len(ac),'states',len(states) if isinstance(states,list) else 0,'N49079',json.dumps(target[:3]),'Registry',json.dumps(data.get('response',{}).get('aircraft',{}))[:350] if isinstance(data,dict) and label.startswith('ADSBdb') else '',flush=True)
             except urllib.error.HTTPError as e:print(label,'HTTP',e.code,flush=True)
             except Exception as e:print(label,type(e).__name__,str(e)[:130],flush=True)
           PY
