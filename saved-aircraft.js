@@ -3,6 +3,7 @@
 (() => {
   const KEY='jft.saved.aircraft.v1';
   const PROXY_KEY='jft.radar.bridge.url.v1';
+  const DEFAULT_BRIDGE_URL='https://jacks-radar.joshua-maziarz1.workers.dev';
   const starter=()=>({
     categories:[{id:'sweet-aviation',name:'Sweet Aviation'}],
     planes:[
@@ -171,7 +172,7 @@
     }catch(e){notify('Import failed: '+e.message);}
   });
   const radarInput=byId('radarBridgeUrl');
-  try{radarInput.value=localStorage.getItem(PROXY_KEY)||'';}catch(_){}
+  try{radarInput.value=localStorage.getItem(PROXY_KEY)||DEFAULT_BRIDGE_URL;}catch(_){radarInput.value=DEFAULT_BRIDGE_URL;}
   byId('saveRadarBridge').addEventListener('click',async()=>{
     const value=radarInput.value.trim().replace(/\/+$/,'');
     if(value&&!/^https:\/\/[a-z0-9][a-z0-9.-]+(?:\:[0-9]+)?$/i.test(value)){
@@ -193,7 +194,7 @@
   });
   if(memoryOnly)notify('Storage disabled: saved planes may disappear when this browser closes.');
   else notify('Aircraft lists are saved on this device. Export a backup to move them to another device.');
-  if(radarInput.value)byId('radarBridgeStatus').textContent='Using configured free radar bridge.';
+  if(radarInput.value)byId('radarBridgeStatus').textContent='Free radar bridge configured. Live flight data appears when available.';
   else byId('radarBridgeStatus').textContent='Live tracking needs a one-time free radar bridge setup; saving categories works now.';
   input.addEventListener('input',()=>{byId('saveCurrent').textContent=library.planes.some(p=>p.tail===safeTail(input.value))?'Update saved plane':'Save plane';});
   render();
