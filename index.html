@@ -15,10 +15,10 @@
 </head>
 <body><div class="page"><main class="shell">
 <div class="head"><div class="brand"><div class="logo" aria-hidden="true">✈</div><div><h1>Jack's Flight Tracker</h1><div class="sub">Find the airplane. Follow the flight.</div></div></div><div class="tag">PERSONAL FLIGHT RADAR</div></div>
-<section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Enter the airplane's registration (N-number). Updates every 30 seconds while the page is open.</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find flying plane to test</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div></section>
+<section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Enter the airplane's registration (N-number). Free community data — no API key needed. Updates every 30 seconds while the page is open.</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find flying plane to test</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div></section>
 <div class="status-bar"><div class="status" role="status" aria-live="polite"><span id="dot" class="dot"></span><span id="statusText">Ready to track Jack’s plane.</span></div><div class="source" id="updatedText">Not tracking</div></div>
 <div class="layout"><section class="map-wrap" aria-label="Aircraft map"><div id="map"></div><div class="map-overlay"><span aria-hidden="true">⌖</span><span id="mapLabel">Map ready</span></div><button class="map-control" type="button" id="recenterBtn" disabled>⌖ Center on plane</button></section><aside class="side"><div class="card"><div class="card-label">Tracking</div><div id="tailDisplay" class="tail">N233ND</div><div id="typeDisplay" class="aircraft">Sweet Aviation • Diamond DA20-C1</div><div class="stats"><div><div class="card-label">Altitude</div><div id="altDisplay" class="value">—</div><div class="unit">feet</div></div><div><div class="card-label">Speed</div><div id="speedDisplay" class="value">—</div><div class="unit">mph (ground)</div></div><div><div class="card-label">Heading</div><div id="headingDisplay" class="value">—</div><div class="unit">degrees</div></div></div><div id="lastDisplay" class="last">Live details appear when the aircraft is broadcasting a position.</div></div><div class="card notice"><strong>Important</strong> — This follows the <strong>airplane</strong>, not Jack's phone. Aircraft can disappear from public tracking because of low altitude, receiver coverage, equipment, or privacy settings. Missing data is not an emergency indication. Do not use this app for flight safety decisions.</div></aside></div>
-<footer>Aircraft data: <a href="https://airplanes.live/" target="_blank" rel="noopener noreferrer">Airplanes.live</a> / <a href="https://www.adsb.lol/" target="_blank" rel="noopener noreferrer">ADSB.lol</a> when available. Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors, tiles © <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>. No flight data is invented. Current-session track only.</footer>
+<footer>Free aircraft data: <a href="https://opendata.adsb.fi/" target="_blank" rel="noopener noreferrer">adsb.fi</a> (personal use only) and <a href="https://www.adsb.lol/" target="_blank" rel="noopener noreferrer">adsb.lol</a> (ODbL 1.0). No API key or paid subscription required at present. Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors, tiles © <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>. No flight data is invented. Current-session track only.</footer>
 </main></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -36,6 +36,12 @@ const backBtn = document.getElementById('backBtn');
 const map = L.map('map', {zoomControl:true}).setView([41.5,-85], 7);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>',maxZoom:19,subdomains:'abcd'}).addTo(map);
 const JACK_TAIL = 'N233ND';
+// Free, public registration and location lookups. No user API key needed.
+// These community providers are independent and may change access rules.
+const FREE_SOURCES = [
+ {name:'adsb.fi', base:'https://opendata.adsb.fi/api', registration:(tail)=>'/v2/registration/'+encodeURIComponent(tail), nearby:'/v3/lat/41.08/lon/-85.14/dist/150'},
+ {name:'adsb.lol', base:'https://api.adsb.lol', registration:(tail)=>'/v2/reg/'+encodeURIComponent(tail), nearby:'/v2/point/41.08/-85.14/150'}
+];
 let activeTail = '', timer = null, marker = null, trail = null, sessionPath = [], lastPosition = null, requestSerial = 0, activeFetch = false, testSearching = false;
 function elt(id,v){document.getElementById(id).textContent=v;}
 function state(message, kind='neutral') {statusText.textContent=message;dot.className='dot'+(kind==='live'?' live':kind==='warn'?' warn':'');}
@@ -75,11 +81,11 @@ async function update(){
  activeFetch=true;const serial=requestSerial,tail=activeTail;
  btn.disabled=true;updatedText.textContent='Checking live data…';
  let record=null,ok=false,errors=[];
- for(const base of ['https://api.airplanes.live','https://api.adsb.lol']){
-   try {const res=await fetchSource(base,`/v2/reg/${encodeURIComponent(tail)}`);if(serial!==requestSerial)return;ok=true;
-     const found=res.ac.find(a=>String(a.r||'').replace(/[^A-Z0-9]/gi,'').toUpperCase()===tail.replace(/[^A-Z0-9]/gi,''))||res.ac[0];record=found||null;
-     if(record)break;
-   } catch(e){errors.push(e.message);}
+ for(const source of FREE_SOURCES){
+   try {const res=await fetchSource(source.base, source.registration(tail));if(serial!==requestSerial)return;ok=true;
+     const found=res.ac.find(a=>String(a.r||'').replace(/[^A-Z0-9]/gi,'').toUpperCase()===tail.replace(/[^A-Z0-9]/gi,''));
+     if(found){record=found;break;}
+   } catch(e){errors.push(source.name+': '+e.message);}
  }
  if(serial!==requestSerial)return;
  const time=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});updatedText.textContent='Checked '+time;
@@ -93,7 +99,7 @@ async function update(){
    elt('tailDisplay',tail);
    if(lastPosition){state('No current signal — showing last position from this session.','warn');mapLabel.textContent='Last known position — not live';elt('lastDisplay','Aircraft not found in the latest update. Saved map position is not live.');}
    else {state('Not currently visible on public flight tracking.','warn');mapLabel.textContent='Awaiting an aircraft position';elt('typeDisplay','No live signal available');elt('lastDisplay','The aircraft may be on the ground, out of coverage, or not broadcasting a usable position.');}
- } else {state('Unable to reach a flight-data service. Try again later.','warn');updatedText.textContent='Connection unavailable';if(lastPosition){mapLabel.textContent='Last known position — not live';elt('lastDisplay','Connection failed — map position is not live.');}else elt('lastDisplay','Browser data access may be blocked by the provider. A small server proxy may be required for hosting.');}
+ } else {state('Free aircraft data could not be reached. No API key is needed; service access may be blocked or temporarily down.','warn');updatedText.textContent='Connection unavailable';if(lastPosition){mapLabel.textContent='Last known position — not live';elt('lastDisplay','Connection failed — map position is not live.');}else elt('lastDisplay','This browser may not have permission to read a public aircraft feed directly. A free proxy may be needed; no paid API key is required.');}
  activeFetch=false;btn.disabled=false;
 }
 function begin(tail){
@@ -115,10 +121,9 @@ async function findTestAircraft(){
  state('Searching live aircraft near Fort Wayne…');
  let reached=false, candidates=[], problems=[];
  try{
-   const endpoints=['https://api.airplanes.live','https://api.adsb.lol'];
-   for(const base of endpoints){
+   for(const source of FREE_SOURCES){
      try{
-       const data=await fetchSource(base,'/v2/point/41.08/-85.14/150');
+       const data=await fetchSource(source.base,source.nearby);
        reached=true;
        candidates=data.ac.filter(ac=>{
          const reg=String(ac.r||'').trim().toUpperCase();
@@ -130,7 +135,7 @@ async function findTestAircraft(){
            Number.isFinite(gs)&&gs>90;
        });
        if(candidates.length)break;
-     }catch(e){problems.push(e.message);}
+     }catch(e){problems.push(source.name+': '+e.message);}
    }
    if(candidates.length){
      candidates.sort((a,b)=>{
@@ -141,7 +146,7 @@ async function findTestAircraft(){
      input.value=reg;begin(reg);
      state(`Found ${reg}. Checking its latest position…`);
    }else if(reached){state('No suitable aircraft found nearby. Try again shortly.','warn');}
-   else {state('Live-data connection unavailable. Try a tail number from Airplanes.live.','warn');}
+   else {state('Free aircraft data unavailable. No key is needed; try again shortly.','warn');}
  }finally {testSearching=false;testBtn.disabled=false;testBtn.textContent='✈ Find flying plane to test';}
 }
 testBtn.addEventListener('click',findTestAircraft);
