@@ -355,29 +355,30 @@ function renderDemoFrame(now){
  const alt=Math.round(part.start[2]+(part.end[2]-part.start[2])*ratio);
  const speed=Math.round(part.start[3]+(part.end[3]-part.start[3])*ratio);
  const ll=[lat,lon];
- // Throttle DOM/map marker changes to ~12fps, while the time-based
- // interpolation keeps the speed stable regardless of frame rate.
+ // Marker follows each animation frame smoothly. Updating its SVG
+ // icon only on a heading change avoids flicker on iOS Safari.
  if(!marker){
    marker=L.marker(ll,{icon:planeIcon(part.bearing)}).addTo(map).bindPopup('SIMULATED DEMO FLIGHT');
    map.setView(ll,11);
    centerBtn.disabled=false;
+   renderDemoFrame.lastBearing=part.bearing;
  }
- if(now-demoLastPoint>80){
-   marker.setLatLng(ll);
+ marker.setLatLng(ll);
+ if(Math.abs(part.bearing-(renderDemoFrame.lastBearing??0))>2){
    marker.setIcon(planeIcon(part.bearing));
-   lastPosition=ll;
-   demoLastPoint=now;
-   if(!sessionPath.length || demoClock-(renderDemoFrame.lastTrailTime||0)>1.4){
-     sessionPath.push(ll);
-     if(sessionPath.length>500)sessionPath.shift();
-     if(!trail)trail=L.polyline(sessionPath,{color:'#59d5e7',weight:3,opacity:.75}).addTo(map);
-     else trail.setLatLngs(sessionPath);
-     renderDemoFrame.lastTrailTime=demoClock;
-   }
-   if(demoClock-(renderDemoFrame.lastCameraTime||0)>3){
-     map.panTo(ll);
-     renderDemoFrame.lastCameraTime=demoClock;
-   }
+   renderDemoFrame.lastBearing=part.bearing;
+ }
+ lastPosition=ll;
+ if(!sessionPath.length || demoClock-(renderDemoFrame.lastTrailTime||0)>1.4){
+   sessionPath.push(ll);
+   if(sessionPath.length>500)sessionPath.shift();
+   if(!trail)trail=L.polyline(sessionPath,{color:'#59d5e7',weight:3,opacity:.75}).addTo(map);
+   else trail.setLatLngs(sessionPath);
+   renderDemoFrame.lastTrailTime=demoClock;
+ }
+ if(demoClock-(renderDemoFrame.lastCameraTime||0)>5){
+   map.panTo(ll);
+   renderDemoFrame.lastCameraTime=demoClock;
  }
  if(now-demoLastStats>900){
    elt('tailDisplay','DEMO');
@@ -396,6 +397,7 @@ function startDemoFlight(){
  demoLastFrame=0;demoLastPoint=0;demoLastStats=0;
  renderDemoFrame.lastTrailTime=0;
  renderDemoFrame.lastCameraTime=0;
+ renderDemoFrame.lastBearing=null;
  stopTrackingBtn.disabled=false;
  refreshPlaneBtn.disabled=true;
  autoRefreshToggle.checked=false;
