@@ -51,3 +51,5 @@ jobs:
           test_url 'adsb.fi nearby' 'https://opendata.adsb.fi/api/v3/lat/41.13/lon/-85.14/dist/125'
           test_url 'adsb.lol registration' 'https://api.adsb.lol/v2/reg/N233ND'
           test_url 'adsb.lol nearby' 'https://api.adsb.lol/v2/point/41.13/-85.14/125'
+          test_url 'adsb.one nearby' 'https://api.adsb.one/v2/point/41.13/-85.14/125'
+          test_url 'airplanes.live nearby' 'https://api.airplanes.live/v2/point/41.13/-85.14/125'
