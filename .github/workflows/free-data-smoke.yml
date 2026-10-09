@@ -1,0 +1,53 @@
+name: Test Free Flight-Data Connections
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "index.html"
+      - "ios/JacksFlightTracker/AircraftService.swift"
+      - ".github/workflows/free-data-smoke.yml"
+  workflow_dispatch:
+
+jobs:
+  flight-data-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check browser JavaScript syntax
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          html = Path("index.html").read_text(encoding="utf8")
+          scripts = re.findall(r"<script(?:\s[^>]*)?>([\s\S]*?)</script>", html)
+          assert scripts, "No inline Javascript in tracker"
+          Path("/tmp/jacks-tracker.js").write_text(scripts[-1])
+          print(f"Extracted {len(scripts[-1])} characters of inline JS")
+          PY
+          node --check /tmp/jacks-tracker.js
+      - name: Report public API availability and CORS headers
+        shell: bash
+        run: |
+          test_url() {
+            local name="$1" url="$2"
+            echo "Checking $name"
+            http=$(curl -sSL --max-time 12 -o /tmp/aircraft-response -D /tmp/aircraft-headers -w '%{http_code}' -H 'Origin: https://joshuamaziarz1-ux.github.io' "$url") || http="network-error"
+            echo "HTTP: $http"
+            grep -iE '^access-control-allow-origin:' /tmp/aircraft-headers || echo "No browser CORS allow-origin header returned"
+            python3 - <<'PY'
+          from pathlib import Path
+          import json
+          try:
+              obj=json.loads(Path("/tmp/aircraft-response").read_bytes())
+              print("JSON aircraft-array present:", isinstance(obj.get("ac"),list))
+              print("Aircraft count:", len(obj.get("ac",[])) if isinstance(obj.get("ac"),list) else "n/a")
+          except Exception:
+              print("Response could not be parsed as aircraft JSON")
+          PY
+          }
+          test_url 'adsb.fi registration' 'https://opendata.adsb.fi/api/v2/registration/N233ND'
+          sleep 2
+          test_url 'adsb.fi nearby' 'https://opendata.adsb.fi/api/v3/lat/41.13/lon/-85.14/dist/125'
+          test_url 'adsb.lol registration' 'https://api.adsb.lol/v2/reg/N233ND'
+          test_url 'adsb.lol nearby' 'https://api.adsb.lol/v2/point/41.13/-85.14/125'
