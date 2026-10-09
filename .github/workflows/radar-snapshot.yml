@@ -1,8 +1,8 @@
 name: Update Free Fort Wayne Radar Snapshot
 on:
   schedule:
-    # Free GitHub Actions supports intervals no shorter than 5 minutes.
-    - cron: '2-59/5 * * * *'
+    # GitHub schedule is best-effort: delayed/skipped runs are possible.
+    - cron: '*/5 * * * *'
   workflow_dispatch:
   push:
     branches: [main]
