@@ -67,13 +67,12 @@ const FREE_SOURCES = [
  {name:'adsb.lol', base:'https://api.adsb.lol', registration:(tail)=>'/v2/reg/'+encodeURIComponent(tail), nearby:'/v2/point/41.08/-85.14/150'}
 ];
 function sourcesForBrowser(){
- let bridge='';
- try{bridge=localStorage.getItem('jft.radar.bridge.url.v1')||''}catch(_){}
+ // Our Cloudflare Worker is the default; users do not have to paste its URL.
+ let bridge='https://jacks-radar.joshua-maziarz1.workers.dev';
+ try{bridge=localStorage.getItem('jft.radar.bridge.url.v1')||bridge}catch(_){}
  if(/^https:\/\/[a-z0-9][a-z0-9.-]+(?::\d+)?$/i.test(bridge)){
    return [{name:'Free radar bridge',base:bridge,registration:(tail)=>'/api/aircraft/'+encodeURIComponent(tail),nearby:'/api/nearby'}];
  }
- // Free providers do not permit CORS requests from GitHub Pages.
- // Avoid slow repeated failed requests; use the user's own free bridge instead.
  return [];
 }
 let activeTail = '', timer = null, marker = null, trail = null, sessionPath = [], lastPosition = null, requestSerial = 0, activeFetch = false, testSearching = false;
