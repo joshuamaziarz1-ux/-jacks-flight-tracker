@@ -7,10 +7,10 @@ final class TrackingStore: ObservableObject {
     static let jackTail = "N233ND"
 
     @Published var tailInput: String = jackTail
-    @Published private(set) var watchedTail: String = jackTail
+    @Published private(set) var watchedTail: String = ""
     @Published private(set) var aircraft: TrackedAircraft?
     @Published private(set) var trail: [CLLocationCoordinate2D] = []
-    @Published private(set) var status = "Checking for Jack's airplane…"
+    @Published private(set) var status = "Ready. Choose an airplane to check its position."
     @Published private(set) var lastChecked: Date?
     @Published private(set) var isLoading = false
     @Published private(set) var isFindingTestPlane = false
@@ -38,8 +38,17 @@ final class TrackingStore: ObservableObject {
         await startSearch()
     }
 
+    func stopTracking() {
+        watchedTail = ""
+        aircraft = nil
+        trail = []
+        lastChecked = nil
+        followAircraft = true
+        status = "Not tracking. Saved aircraft are only checked when selected."
+    }
+
     func refresh() async {
-        guard !isLoading && !isFindingTestPlane else { return }
+        guard !watchedTail.isEmpty && !isLoading && !isFindingTestPlane else { return }
         isLoading = true
         defer { isLoading = false }
         let requestedTail = watchedTail
