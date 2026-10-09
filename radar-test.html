@@ -25,7 +25,8 @@ a{color:#7fe4f9;overflow-wrap:anywhere}button{background:#59d5e7;color:#0b2231;b
 <div class="panel"><h2>2. N278DC aircraft feed</h2><div id="aircraft" class="status">Waiting…</div><div id="aircraftDetail" class="detail"></div></div>
 <div class="panel"><h2>3. Fort Wayne aircraft search</h2><div id="nearby" class="status">Waiting…</div><div id="nearbyDetail" class="detail"></div></div>
 <div class="panel"><h2>4. Direct free aircraft feed (AvioADSB)</h2><div id="avio" class="status">Waiting…</div><div id="avioDetail" class="detail"></div><p class="small">No API key, 100 requests/day and limited receiver coverage. A successful connection may return zero airplanes.</p></div>
-<div class="panel"><h2>5. Map tiles</h2><div id="tiles" class="status">Waiting…</div><div id="tilesDetail" class="detail"></div></div>
+<div class="panel"><h2>5. GitHub aircraft snapshot (delayed)</h2><div id="snapshot" class="status">Waiting…</div><div id="snapshotDetail" class="detail"></div></div>
+<div class="panel"><h2>6. Map tiles</h2><div id="tiles" class="status">Waiting…</div><div id="tilesDetail" class="detail"></div></div>
 <p class="small"><strong>If a check fails:</strong> send a screenshot of this page. If the Cloudflare connection shows a network/CORS error, also open the direct <a href="https://jacks-radar.joshua-maziarz1.workers.dev/health" target="_blank" rel="noopener">radar health link</a>.</p>
 <a href="./">← Back to Jack's Flight Tracker</a>
 </main>
@@ -93,6 +94,23 @@ async function checkAvio(){
       'Direct feed could not be read: '+String(error?.message||error),'bad');
  }
 }
+async function checkSnapshot(){
+ result('snapshot','Checking GitHub aircraft sample…','','warn');
+ const url='https://raw.githubusercontent.com/joshuamaziarz1-ux/-jacks-flight-tracker/radar-data/fort-wayne.json?minute='+Math.floor(Date.now()/60000);
+ try {
+   const res=await fetch(url,{cache:'no-store',signal:AbortSignal.timeout(14000)});
+   if(!res.ok)throw Error('HTTP '+res.status);
+   const data=await res.json();
+   if(!Array.isArray(data.ac)||!data.fetchedAt)throw Error('Unexpected snapshot data');
+   const ageSeconds=Math.max(0,(Date.now()-Date.parse(data.fetchedAt))/1000);
+   const ageText=Math.ceil(ageSeconds/60)+' minutes ago';
+   result('snapshot',data.ac.length+' aircraft in saved snapshot'+(ageSeconds<=900?' ✓':' (old)'),
+     'Last collected '+ageText+'. This is delayed data, not a live position. Source: adsb.lol ODbL 1.0.',
+     ageSeconds<=900?'good':'warn');
+ } catch(error){
+   result('snapshot','Snapshot connection failed',String(error.message||error),'bad');
+ }
+}
 function tileTest(){
  result('tiles','Loading map tile…','','warn');
  const image=new Image();
@@ -103,7 +121,7 @@ function tileTest(){
 }
 async function run(){
  document.getElementById('run').disabled=true;
- const calls=[check('health','/health'),check('aircraft','/api/aircraft/N278DC'),check('nearby','/api/nearby'),checkAvio()];
+ const calls=[check('health','/health'),check('aircraft','/api/aircraft/N278DC'),check('nearby','/api/nearby'),checkAvio(),checkSnapshot()];
  tileTest();
  await Promise.all(calls);
  document.getElementById('run').disabled=false;
