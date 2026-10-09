@@ -24,7 +24,8 @@ a{color:#7fe4f9;overflow-wrap:anywhere}button{background:#59d5e7;color:#0b2231;b
 <div class="panel"><h2>1. Cloudflare connection</h2><div id="health" class="status">Waiting…</div><div id="healthDetail" class="detail"></div></div>
 <div class="panel"><h2>2. N278DC aircraft feed</h2><div id="aircraft" class="status">Waiting…</div><div id="aircraftDetail" class="detail"></div></div>
 <div class="panel"><h2>3. Fort Wayne aircraft search</h2><div id="nearby" class="status">Waiting…</div><div id="nearbyDetail" class="detail"></div></div>
-<div class="panel"><h2>4. Map tiles</h2><div id="tiles" class="status">Waiting…</div><div id="tilesDetail" class="detail"></div></div>
+<div class="panel"><h2>4. Direct free aircraft feed (AvioADSB)</h2><div id="avio" class="status">Waiting…</div><div id="avioDetail" class="detail"></div><p class="small">No API key, 100 requests/day and limited receiver coverage. A successful connection may return zero airplanes.</p></div>
+<div class="panel"><h2>5. Map tiles</h2><div id="tiles" class="status">Waiting…</div><div id="tilesDetail" class="detail"></div></div>
 <p class="small"><strong>If a check fails:</strong> send a screenshot of this page. If the Cloudflare connection shows a network/CORS error, also open the direct <a href="https://jacks-radar.joshua-maziarz1.workers.dev/health" target="_blank" rel="noopener">radar health link</a>.</p>
 <a href="./">← Back to Jack's Flight Tracker</a>
 </main>
@@ -68,6 +69,30 @@ async function check(id,path){
    result(id,'Connection failed',String(error?.message||error)+'. The browser may be blocked, or the server may be unavailable.','bad');
  }
 }
+async function checkAvio(){
+ result('avio','Checking direct aircraft feed…','','warn');
+ try {
+   const res=await fetch('https://avioadsb.org/v1/point/41.13/-85.14/100',{
+     cache:'no-store',signal:AbortSignal.timeout(14000)
+   });
+   if(res.status===429){
+     result('avio','Free quota or 10-second rate limit reached',
+       'Wait before retrying. AvioADSB permits 100 no-key requests/day per network.','warn');
+     return;
+   }
+   if(!res.ok){
+     result('avio','HTTP '+res.status+' — error','Free AvioADSB feed could not be reached.','bad');return;
+   }
+   const data=await res.json();
+   if(!Array.isArray(data.ac))throw Error('Unexpected aircraft response');
+   result('avio','Direct connection works ✓',
+     data.ac.length+' aircraft reported near Fort Wayne. '+(data.ac.length?'Use Find flying plane to test.':'The free receiver network may have limited coverage there.'),
+     data.ac.length?'good':'warn');
+ }catch(error){
+   result('avio','Browser connection failed',
+      'Direct feed could not be read: '+String(error?.message||error),'bad');
+ }
+}
 function tileTest(){
  result('tiles','Loading map tile…','','warn');
  const image=new Image();
@@ -78,7 +103,7 @@ function tileTest(){
 }
 async function run(){
  document.getElementById('run').disabled=true;
- const calls=[check('health','/health'),check('aircraft','/api/aircraft/N278DC'),check('nearby','/api/nearby')];
+ const calls=[check('health','/health'),check('aircraft','/api/aircraft/N278DC'),check('nearby','/api/nearby'),checkAvio()];
  tileTest();
  await Promise.all(calls);
  document.getElementById('run').disabled=false;
