@@ -20,7 +20,7 @@
 </head>
 <body><div class="page"><main class="shell">
 <div class="head"><div class="brand"><div class="logo" aria-hidden="true">✈</div><div><h1>Jack's Flight Tracker</h1><div class="sub">Find the airplane. Follow the flight.</div></div></div><div class="tag">PERSONAL FLIGHT RADAR</div></div>
-<section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Enter the airplane's registration (N-number). Free community data — no API key needed. Updates every 30 seconds while the page is open.</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find flying plane to test</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div></section>
+<section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Free no-key aircraft tracking. Checks every 60 seconds while open to respect provider limits (AvioADSB: 100 requests/day, shared by network; coverage varies).</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find flying plane to test</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div></section>
 <section class="library-panel" id="aircraftLibrary" aria-label="My saved aircraft">
  <div class="library-header"><div><h2>✈ My Aircraft</h2><p>Save planes, group them into your own categories, and track with one tap.</p></div>
  <button id="downloadLibrary" type="button">↓ Export backup</button></div>
@@ -45,7 +45,7 @@
  <div class="status-bar"><div class="status" role="status" aria-live="polite"><span id="dot" class="dot"></span><span id="statusText">Ready to track Jack’s plane.</span></div><div class="source" id="updatedText">Not tracking</div></div>
 <div id="radarDiagnostic" class="diagnostic-note hidden">Live radar is not responding. <a href="./radar-test.html">Run radar and map checks →</a> and send a screenshot of the results.</div>
 <div class="layout"><section class="map-wrap" aria-label="Aircraft map"><div id="map"></div><div class="map-overlay"><span aria-hidden="true">⌖</span><span id="mapLabel">Map ready</span></div><button class="map-control" type="button" id="recenterBtn" disabled>⌖ Center on plane</button></section><aside class="side"><div class="card"><div class="card-label">Tracking</div><div id="tailDisplay" class="tail">N233ND</div><div id="typeDisplay" class="aircraft">Sweet Aviation • Diamond DA20-C1</div><div class="stats"><div><div class="card-label">Altitude</div><div id="altDisplay" class="value">—</div><div class="unit">feet</div></div><div><div class="card-label">Speed</div><div id="speedDisplay" class="value">—</div><div class="unit">mph (ground)</div></div><div><div class="card-label">Heading</div><div id="headingDisplay" class="value">—</div><div class="unit">degrees</div></div></div><div id="lastDisplay" class="last">Live details appear when the aircraft is broadcasting a position.</div></div><div class="card notice"><strong>Important</strong> — This follows the <strong>airplane</strong>, not Jack's phone. Aircraft can disappear from public tracking because of low altitude, receiver coverage, equipment, or privacy settings. Missing data is not an emergency indication. Do not use this app for flight safety decisions.</div></aside></div>
-<footer>Free radar fallback: <a href="https://opensky-network.org/" target="_blank" rel="noopener noreferrer">OpenSky Network</a> (anonymous access is limited and coverage may vary). No API key or paid subscription required. Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors,  No flight data is invented. Current-session track only.</footer>
+<footer>Free personal aircraft data: <a href="https://avioadsb.org/" target="_blank" rel="noopener noreferrer">AvioADSB</a> (CC BY 4.0; 100 no-key requests/day and limited coverage). Cloudflare radar may be unavailable. No paid API key required. Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors,  No flight data is invented. Current-session track only.</footer>
 </main></div>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
@@ -89,14 +89,19 @@ const FREE_SOURCES = [
  {name:'adsb.fi', base:'https://opendata.adsb.fi/api', registration:(tail)=>'/v2/registration/'+encodeURIComponent(tail), nearby:'/v3/lat/41.08/lon/-85.14/dist/150'},
  {name:'adsb.lol', base:'https://api.adsb.lol', registration:(tail)=>'/v2/reg/'+encodeURIComponent(tail), nearby:'/v2/point/41.08/-85.14/150'}
 ];
+// AvioADSB explicitly permits browser access on its free personal tier.
+// Anonymous use is limited to 100 queries/day, 1 per 10 seconds; receiver coverage varies.
+// The Cloudflare Worker remains first but is skipped briefly after upstream failures.
+let bridgeUnavailableUntil=0, lastAvioCall=0, avioQueue=Promise.resolve();
 function sourcesForBrowser(){
- // Our Cloudflare Worker is the default; users do not have to paste its URL.
  let bridge='https://jacks-radar.joshua-maziarz1.workers.dev';
  try{bridge=localStorage.getItem('jft.radar.bridge.url.v1')||bridge}catch(_){}
- if(/^https:\/\/[a-z0-9][a-z0-9.-]+(?::\d+)?$/i.test(bridge)){
-   return [{name:'Free radar bridge',base:bridge,registration:(tail)=>'/api/aircraft/'+encodeURIComponent(tail),nearby:'/api/nearby'}];
+ const sources=[];
+ if(/^https:\/\/[a-z0-9][a-z0-9.-]+(?::\d+)?$/i.test(bridge) && Date.now()>bridgeUnavailableUntil){
+   sources.push({name:'Free radar bridge',base:bridge,registration:(tail)=>'/api/aircraft/'+encodeURIComponent(tail),nearby:'/api/nearby'});
  }
- return [];
+ sources.push({name:'AvioADSB',base:'https://avioadsb.org',registration:(tail)=>'/v1/reg/'+encodeURIComponent(tail),nearby:'/v1/point/41.13/-85.14/100'});
+ return sources;
 }
 let activeTail = '', timer = null, marker = null, trail = null, sessionPath = [], lastPosition = null, requestSerial = 0, activeFetch = false, testSearching = false;
 function elt(id,v){document.getElementById(id).textContent=v;}
@@ -140,38 +145,59 @@ function position(ac, age){
   }
 }
 async function fetchSource(base,path, signal){
-  const controller = new AbortController();const timeout=setTimeout(()=>controller.abort(),9000);
+  let release;
+  if(base==='https://avioadsb.org'){
+    const preceding=avioQueue;
+    avioQueue=new Promise(resolve=>{release=resolve});
+    await preceding;
+    const wait=11000-(Date.now()-lastAvioCall);
+    if(wait>0)await new Promise(resolve=>setTimeout(resolve,wait));
+    lastAvioCall=Date.now();
+  }
+  const controller = new AbortController();const timeout=setTimeout(()=>controller.abort(),11000);
   const abort=()=>controller.abort();signal?.addEventListener('abort',abort,{once:true});
-  try {const resp=await fetch(`${base}${path}`,{signal:controller.signal,cache:'no-store'});
+  try {
+    const resp=await fetch(`${base}${path}`,{signal:controller.signal,cache:'no-store'});
     if(!resp.ok)throw new Error('HTTP '+resp.status);
-    const data=await resp.json(); if(!data||!Array.isArray(data.ac))throw new Error('Unexpected data');return data;
-  } finally {clearTimeout(timeout);signal?.removeEventListener('abort',abort);}
+    const data=await resp.json();
+    if(!data||!Array.isArray(data.ac))throw new Error('Unexpected data');
+    return data;
+  } finally {
+    clearTimeout(timeout);signal?.removeEventListener('abort',abort);
+    if(release)release();
+  }
 }
 async function update(){
  if(!activeTail||activeFetch)return;
  activeFetch=true;const serial=requestSerial,tail=activeTail;
  btn.disabled=true;updatedText.textContent='Checking live data…';
- let record=null,ok=false,errors=[];
+ let record=null,ok=false,errors=[],connectedSource='';
  for(const source of sourcesForBrowser()){
-   try {const res=await fetchSource(source.base, source.registration(tail));if(serial!==requestSerial)return;ok=true;
+   try {
+     const res=await fetchSource(source.base,source.registration(tail));
+     if(serial!==requestSerial)return;
+     ok=true;connectedSource=source.name;
      const found=res.ac.find(a=>String(a.r||'').replace(/[^A-Z0-9]/gi,'').toUpperCase()===tail.replace(/[^A-Z0-9]/gi,''));
      if(found){record=found;break;}
-   } catch(e){errors.push(source.name+': '+e.message);}
+   } catch(e){
+     errors.push(source.name+': '+e.message);
+     if(source.name==='Free radar bridge')bridgeUnavailableUntil=Date.now()+300000;
+   }
  }
  if(serial!==requestSerial)return;
- const time=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});updatedText.textContent='Checked '+time;
+ const time=new Date().toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});updatedText.textContent='Checked '+time+(connectedSource?' · '+connectedSource:'');
  if(record){
    showRadarDiagnostics(false);
    const age=Number(record.seen_pos);
    const fresh=Number.isFinite(age)&&age>=0&&age<=90&&Number.isFinite(Number(record.lat))&&Number.isFinite(Number(record.lon));
    details(record,!fresh);
-   if(fresh){position(record,age);state(`Aircraft located — position ${Math.round(age)}s old`,'live')}
+   if(fresh){position(record,age);state(`Aircraft located via ${connectedSource} — position ${Math.round(age)}s old`,'live')}
    else {state('Aircraft found, but no current position is available.','warn');mapLabel.textContent=lastPosition?'Last known position — not live':'Waiting for an aircraft position';}
  } else if(ok){
    showRadarDiagnostics(false);
    elt('tailDisplay',tail);
    if(lastPosition){state('No current signal — showing last position from this session.','warn');mapLabel.textContent='Last known position — not live';elt('lastDisplay','Aircraft not found in the latest update. Saved map position is not live.');}
-   else {state('Not currently visible on public flight tracking.','warn');mapLabel.textContent='Awaiting an aircraft position';elt('typeDisplay','No live signal available');elt('lastDisplay','The aircraft may be on the ground, out of coverage, or not broadcasting a usable position.');}
+   else {state('Radar connected ('+connectedSource+'), but '+tail+' has no public position.','warn');mapLabel.textContent='Awaiting an aircraft position';elt('typeDisplay','No live signal available');elt('lastDisplay','The airplane may be on the ground or outside this provider’s coverage. AvioADSB’s free network is limited.');}
  } else {showRadarDiagnostics(true);state(radarProblem(errors),'warn');updatedText.textContent='Connection unavailable';if(lastPosition){mapLabel.textContent='Last known position — not live';elt('lastDisplay','Connection failed — map position is not live.');}else {mapLabel.textContent='Live radar connection unavailable';elt('lastDisplay','Open the Radar Connection Test link above. No paid API key is required.');}}
  activeFetch=false;btn.disabled=false;
 }
@@ -181,7 +207,7 @@ function begin(tail){
  if(changed){if(marker){map.removeLayer(marker);marker=null;}if(trail){map.removeLayer(trail);trail=null;}sessionPath=[];lastPosition=null;centerBtn.disabled=true;mapLabel.textContent='Finding '+tail+'…';elt('typeDisplay','Searching for live aircraft…');elt('altDisplay','—');elt('speedDisplay','—');elt('headingDisplay','—');elt('lastDisplay','Looking up current aircraft broadcasts…');}
  elt('tailDisplay',tail);state('Searching for '+tail+'…');
  backBtn.classList.toggle('hidden',tail===JACK_TAIL);
- if(timer)clearInterval(timer);timer=setInterval(update,30000);activeFetch=false;update();
+ if(timer)clearInterval(timer);timer=setInterval(update,60000);activeFetch=false;update();
 }
 form.addEventListener('submit',e=>{e.preventDefault();begin(input.value.trim().toUpperCase().replace(/\s+/g,''));});
 centerBtn.addEventListener('click',()=>{if(lastPosition)map.setView(lastPosition,11,{animate:true});});
@@ -203,12 +229,12 @@ async function findTestAircraft(){
          const age=Number(ac.seen_pos),alt=Number(ac.alt_baro),gs=Number(ac.gs);
          return /^[A-Z][A-Z0-9-]{2,11}$/.test(reg)&&reg!==JACK_TAIL&&
            Number.isFinite(ac.lat)&&Number.isFinite(ac.lon)&&
-           Number.isFinite(age)&&age>=0&&age<=60&&
-           ac.alt_baro!=='ground'&&Number.isFinite(alt)&&alt>1000&&
-           Number.isFinite(gs)&&gs>90;
+           Number.isFinite(age)&&age>=0&&age<=90&&
+           ac.alt_baro!=='ground'&&Number.isFinite(alt)&&alt>700&&
+           Number.isFinite(gs)&&gs>40;
        });
        if(candidates.length)break;
-     }catch(e){problems.push(source.name+': '+e.message);}
+     }catch(e){problems.push(source.name+': '+e.message);if(source.name==='Free radar bridge')bridgeUnavailableUntil=Date.now()+300000;}
    }
    if(candidates.length){
      candidates.sort((a,b)=>{
