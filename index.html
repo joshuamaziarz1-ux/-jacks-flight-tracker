@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#091321">
 <title>Jack's Flight Tracker</title>
 <link rel="preconnect" href="https://unpkg.com">
+<link rel="stylesheet" href="./saved-aircraft.css?v=1">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzx78DPbJbY+2jOs3u3I+P9TzM=" crossorigin="">
 <style>
 :root {color-scheme: dark;--bg:#08121f;--surface:#102033;--surface2:#15283e;--border:#263e58;--text:#eef5ff;--muted:#9eb3ca;--cyan:#59d5e7;--accent:#f2bc56;--ok:#74dda8;--warn:#ffd184;}
@@ -18,7 +19,28 @@
 <body><div class="page"><main class="shell">
 <div class="head"><div class="brand"><div class="logo" aria-hidden="true">✈</div><div><h1>Jack's Flight Tracker</h1><div class="sub">Find the airplane. Follow the flight.</div></div></div><div class="tag">PERSONAL FLIGHT RADAR</div></div>
 <section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Enter the airplane's registration (N-number). Free community data — no API key needed. Updates every 30 seconds while the page is open.</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find flying plane to test</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div></section>
-<div class="status-bar"><div class="status" role="status" aria-live="polite"><span id="dot" class="dot"></span><span id="statusText">Ready to track Jack’s plane.</span></div><div class="source" id="updatedText">Not tracking</div></div>
+<section class="library-panel" id="aircraftLibrary" aria-label="My saved aircraft">
+ <div class="library-header"><div><h2>✈ My Aircraft</h2><p>Save planes, group them into your own categories, and track with one tap.</p></div>
+ <button id="downloadLibrary" type="button">↓ Export backup</button></div>
+ <div id="libraryTabs" class="lib-tabs" aria-label="Aircraft categories"></div>
+ <div id="libraryPlanes" class="library-plane-list"></div>
+ <div id="categoryManager" class="lib-category-manage"></div>
+ <hr class="lib-divider">
+ <strong class="label">Save a plane from the tail-number search box</strong>
+ <div class="lib-save-form"><select id="saveCategory" aria-label="Choose category for aircraft"></select><span class="lib-help" style="align-self:center">Selected plane: <strong>tail number above</strong></span><button type="button" class="lib-primary" id="saveCurrent">Save plane</button></div>
+ <hr class="lib-divider">
+ <form id="newCategoryForm" class="lib-category-form"><input id="categoryName" maxlength="36" required placeholder="New category (e.g. My Favorites)" aria-label="New category name"><button type="submit">+ Create category</button></form>
+ <div class="lib-row" style="margin-top:12px"><label class="lib-help" for="importLibrary">Restore a library backup:</label><input id="importLibrary" type="file" accept="application/json,.json" aria-label="Import saved aircraft backup"></div>
+ <div role="status" aria-live="polite" id="libraryStatus" class="lib-status"></div>
+ <details class="radar-settings"><summary>⚙ Live radar connection (free)</summary>
+ <p class="radar-tip">Saved planes work immediately. Live browser positions need a small no-cost radar bridge (Cloudflare Worker). Enter its HTTPS workers.dev address once.</p>
+ <div class="lib-row"><input id="radarBridgeUrl" type="url" inputmode="url" placeholder="https://jacks-radar.yourname.workers.dev" aria-label="Radar bridge URL">
+ <button id="saveRadarBridge" type="button" class="lib-primary">Connect radar</button></div>
+ <div class="lib-status" role="status" id="radarBridgeStatus"></div>
+ <p class="radar-tip">Do not enter an API key or payment information. <a href="https://github.com/joshuamaziarz1-ux/-jacks-flight-tracker/blob/main/radar-bridge/README.md" target="_blank" rel="noopener noreferrer" style="color:#88e6f5">Free radar bridge setup directions</a></p>
+ </details>
+ </section>
+ <div class="status-bar"><div class="status" role="status" aria-live="polite"><span id="dot" class="dot"></span><span id="statusText">Ready to track Jack’s plane.</span></div><div class="source" id="updatedText">Not tracking</div></div>
 <div class="layout"><section class="map-wrap" aria-label="Aircraft map"><div id="map"></div><div class="map-overlay"><span aria-hidden="true">⌖</span><span id="mapLabel">Map ready</span></div><button class="map-control" type="button" id="recenterBtn" disabled>⌖ Center on plane</button></section><aside class="side"><div class="card"><div class="card-label">Tracking</div><div id="tailDisplay" class="tail">N233ND</div><div id="typeDisplay" class="aircraft">Sweet Aviation • Diamond DA20-C1</div><div class="stats"><div><div class="card-label">Altitude</div><div id="altDisplay" class="value">—</div><div class="unit">feet</div></div><div><div class="card-label">Speed</div><div id="speedDisplay" class="value">—</div><div class="unit">mph (ground)</div></div><div><div class="card-label">Heading</div><div id="headingDisplay" class="value">—</div><div class="unit">degrees</div></div></div><div id="lastDisplay" class="last">Live details appear when the aircraft is broadcasting a position.</div></div><div class="card notice"><strong>Important</strong> — This follows the <strong>airplane</strong>, not Jack's phone. Aircraft can disappear from public tracking because of low altitude, receiver coverage, equipment, or privacy settings. Missing data is not an emergency indication. Do not use this app for flight safety decisions.</div></aside></div>
 <footer>Free aircraft data: <a href="https://opendata.adsb.fi/" target="_blank" rel="noopener noreferrer">adsb.fi</a> (personal use only) and <a href="https://www.adsb.lol/" target="_blank" rel="noopener noreferrer">adsb.lol</a> (ODbL 1.0). No API key or paid subscription required at present. Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors,  No flight data is invented. Current-session track only.</footer>
 </main></div>
@@ -44,6 +66,14 @@ const FREE_SOURCES = [
  {name:'adsb.fi', base:'https://opendata.adsb.fi/api', registration:(tail)=>'/v2/registration/'+encodeURIComponent(tail), nearby:'/v3/lat/41.08/lon/-85.14/dist/150'},
  {name:'adsb.lol', base:'https://api.adsb.lol', registration:(tail)=>'/v2/reg/'+encodeURIComponent(tail), nearby:'/v2/point/41.08/-85.14/150'}
 ];
+function sourcesForBrowser(){
+ let bridge='';
+ try{bridge=localStorage.getItem('jft.radar.bridge.url.v1')||''}catch(_){}
+ if(/^https:\/\/[a-z0-9][a-z0-9.-]+(?::\d+)?$/i.test(bridge)){
+   return [{name:'Free radar bridge',base:bridge,registration:(tail)=>'/api/aircraft/'+encodeURIComponent(tail),nearby:'/api/nearby'}];
+ }
+ return FREE_SOURCES;
+}
 let activeTail = '', timer = null, marker = null, trail = null, sessionPath = [], lastPosition = null, requestSerial = 0, activeFetch = false, testSearching = false;
 function elt(id,v){document.getElementById(id).textContent=v;}
 function state(message, kind='neutral') {statusText.textContent=message;dot.className='dot'+(kind==='live'?' live':kind==='warn'?' warn':'');}
@@ -83,7 +113,7 @@ async function update(){
  activeFetch=true;const serial=requestSerial,tail=activeTail;
  btn.disabled=true;updatedText.textContent='Checking live data…';
  let record=null,ok=false,errors=[];
- for(const source of FREE_SOURCES){
+ for(const source of sourcesForBrowser()){
    try {const res=await fetchSource(source.base, source.registration(tail));if(serial!==requestSerial)return;ok=true;
      const found=res.ac.find(a=>String(a.r||'').replace(/[^A-Z0-9]/gi,'').toUpperCase()===tail.replace(/[^A-Z0-9]/gi,''));
      if(found){record=found;break;}
@@ -123,7 +153,7 @@ async function findTestAircraft(){
  state('Searching live aircraft near Fort Wayne…');
  let reached=false, candidates=[], problems=[];
  try{
-   for(const source of FREE_SOURCES){
+   for(const source of sourcesForBrowser()){
      try{
        const data=await fetchSource(source.base,source.nearby);
        reached=true;
@@ -155,4 +185,4 @@ testBtn.addEventListener('click',findTestAircraft);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&activeTail)update();});
 // Always return to Jack's airplane when opening the tracker.
 begin(JACK_TAIL);
-</script></body></html>
+</script><script src="./saved-aircraft.js?v=1"></script></body></html>
