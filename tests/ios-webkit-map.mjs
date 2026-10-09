@@ -8,9 +8,28 @@ try {
  page.on('console',msg=>{if(msg.type()==='error')errors.push('CONSOLE '+msg.text().slice(0,240))});
  await page.goto('http://127.0.0.1:9123/index.html',{waitUntil:'domcontentloaded',timeout:40000});
  console.log('Page loaded; waiting for vector map tiles');
- await page.waitForFunction(()=>{
-   try{return typeof map!=='undefined'&&map.view&&map.view.isStyleLoaded()}catch(_){return false}
- },null,{timeout:35000});
+ const diagnostic=await page.evaluate(()=>({
+  lib:typeof window.maplibregl,
+  shim:typeof window.L,
+  supported:typeof window.maplibregl==='object'?window.maplibregl.supported():null,
+  scriptUrls:[...document.querySelectorAll('script[src]')].map(s=>s.src),
+  mapHTML:document.getElementById('map')?.innerHTML.slice(0,300),
+  title:document.title
+ }));
+ console.log('BEFORE WAIT DIAGNOSTIC',JSON.stringify(diagnostic),'browser errors',errors.slice(0,8).join(' | '));
+ try {
+   await page.waitForFunction(()=>{
+     try{return typeof map!=='undefined'&&map.view&&map.view.isStyleLoaded()}catch(_){return false}
+   },null,{timeout:25000});
+ }catch(error){
+   const finalDiagnostics=await page.evaluate(()=>({
+     mapDefined:typeof map!=='undefined', mapCanvas:document.querySelectorAll('#map canvas').length,
+     body:document.getElementById('map')?.textContent.slice(0,300),
+     status:document.getElementById('statusText')?.textContent
+   }));
+   console.log('AFTER WAIT',JSON.stringify(finalDiagnostics),'browser errors',errors.join(' | '));
+   throw error;
+ }
  const snapshot=await page.evaluate(()=>({
   canvas:document.querySelectorAll('#map canvas').length,
   height:document.querySelector('#map').getBoundingClientRect().height,
