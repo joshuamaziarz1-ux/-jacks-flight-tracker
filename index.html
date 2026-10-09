@@ -25,7 +25,7 @@
 </head>
 <body><div class="page"><main class="shell">
 <div class="head"><div class="brand"><div class="logo" aria-hidden="true">✈</div><div><h1>Jack's Flight Tracker</h1><div class="sub">Find the airplane. Follow the flight.</div></div></div><div class="tag">PERSONAL FLIGHT RADAR</div></div>
-<section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Nothing is checked when you open the app. Select a plane and tap Track for a one-time check. Automatic updates are optional.</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find flying plane to test</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div>
+<section class="search-panel" aria-label="Tail number search"><label class="label" for="tailInput">Aircraft tail number</label><form id="searchForm" class="form-row"><input id="tailInput" class="searchbox" inputmode="text" autocomplete="off" autocapitalize="characters" maxlength="12" value="N233ND" placeholder="Example: N233ND" required aria-label="Aircraft tail number"><button id="searchBtn" class="main-btn" type="submit">Track plane →</button></form><p class="helper">Nothing is checked when you open the app. Track is manual. Find Plane / Test Map shows a recent aircraft report or a clearly marked simulated flight.</p><div class="test-tools"><button type="button" class="minor-btn" id="testBtn">✈ Find Plane / Test Map</button><button type="button" class="back-btn hidden" id="backBtn">← Back to Jack (N233ND)</button></div>
 <div class="test-tools tracker-control">
   <button type="button" class="minor-btn" id="refreshPlaneBtn" disabled>↻ Check selected plane</button>
   <button type="button" class="minor-btn" id="stopTrackingBtn" disabled>■ Stop tracking</button>
@@ -141,7 +141,7 @@ function sourcesForBrowser(){
  sources.push({name:'GitHub sampled radar',base:snapshotBase,registration:snapshotPath,nearby:snapshotPath});
  return sources;
 }
-let activeTail = '', timer = null, marker = null, trail = null, sessionPath = [], lastPosition = null, requestSerial = 0, activeFetch = false, testSearching = false;
+let activeTail = '', timer = null, marker = null, trail = null, sessionPath = [], lastPosition = null, requestSerial = 0, activeFetch = false, testSearching = false, demoTimer = null;
 function elt(id,v){document.getElementById(id).textContent=v;}
 function state(message, kind='neutral') {statusText.textContent=message;dot.className='dot'+(kind==='live'?' live':kind==='warn'?' warn':'');}
 function showRadarDiagnostics(show){
@@ -236,7 +236,7 @@ async function update(){
    const valid=Number.isFinite(age)&&age>=0&&Number.isFinite(Number(record.lat))&&Number.isFinite(Number(record.lon));
    const fresh=valid&&!sampled&&age<=90;
    details(record,!fresh);
-   if(valid&&age<=900){
+   if(valid&&age<=(sampled?1800:900)){
      position(record,age);
      if(fresh)state(`Aircraft located via ${connectedSource} — position ${Math.round(age)}s old`,'live');
      else{
@@ -263,6 +263,7 @@ function setRefreshSchedule(){
  }
 }
 function clearTrack(){
+ if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
  requestSerial++;
  activeTail='';
  activeFetch=false;
@@ -281,6 +282,7 @@ function clearTrack(){
  state('Ready. Select an aircraft to check its position.');
 }
 function begin(tail){
+ if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
  tail=String(tail||'').trim().toUpperCase();
  if(!/^[A-Z0-9-]{2,12}$/.test(tail)){
    state('Enter a valid registration, such as N12345.','warn');input.focus();return;
@@ -310,42 +312,91 @@ autoRefreshToggle.addEventListener('change',setRefreshSchedule);
 form.addEventListener('submit',e=>{e.preventDefault();begin(input.value.trim().toUpperCase().replace(/\s+/g,''));});
 centerBtn.addEventListener('click',()=>{if(lastPosition)map.setView(lastPosition,11,{animate:true});});
 backBtn.addEventListener('click',()=>{input.value=JACK_TAIL;begin(JACK_TAIL);});
-// Locate one actually airborne aircraft near Fort Wayne for testing; do not
-// save this tail as Jack's plane or change the default registration.
+// Test is always usable. Prefer a recently OBSERVED real airplane;
+// if no recent receiver data exists, render an unmistakable simulation.
+const demoSteps=[
+  [41.090,-85.200,2100,84,80],[41.105,-85.177,2350,91,74],
+  [41.125,-85.135,2650,96,67],[41.145,-85.095,2900,98,60],
+  [41.166,-85.060,3150,97,49],[41.194,-85.025,3350,92,35],
+  [41.222,-85.000,3500,88,22],[41.251,-84.990,3400,85,7],
+  [41.278,-84.995,3100,82,345],[41.304,-85.014,2780,78,320]
+];
+let demoStep=0;
+function demoTick(){
+ const p=demoSteps[demoStep%demoSteps.length];demoStep++;
+ const sample={r:'DEMO',flight:'SIMULATION',t:'Training aircraft (demo)',
+   lat:p[0],lon:p[1],alt_baro:p[2],gs:p[3],track:p[4],seen_pos:0};
+ details(sample,true);
+ position(sample,0);
+ state('DEMO MODE — simulated flight, NOT A REAL AIRCRAFT','warn');
+ mapLabel.textContent='DEMO SIMULATION — NOT LIVE';
+ elt('lastDisplay','Simulated position. This airplane is not real; demo is for testing the map.');
+ updatedText.textContent='DEMO · simulated motion';
+}
+function startDemoFlight(){
+ clearTrack();
+ activeTail='DEMO';
+ demoStep=0;
+ stopTrackingBtn.disabled=false;
+ refreshPlaneBtn.disabled=true;
+ autoRefreshToggle.checked=false;
+ backBtn.classList.add('hidden');
+ input.value=JACK_TAIL;
+ demoTick();
+ demoTimer=setInterval(demoTick,6500);
+}
+function showObservedTestPlane(record,source){
+ clearTrack();
+ const reg=String(record.r).trim().toUpperCase();
+ activeTail=reg;input.value=reg;
+ stopTrackingBtn.disabled=false;refreshPlaneBtn.disabled=false;
+ backBtn.classList.toggle('hidden',reg===JACK_TAIL);
+ const age=Number(record.seen_pos);
+ details(record,true);
+ position(record,age);
+ const mins=Math.max(1,Math.ceil(age/60));
+ state('RECENT RADAR SAMPLE — '+reg+' reported '+mins+' min ago, NOT LIVE','warn');
+ mapLabel.textContent='DELAYED RADAR POSITION — NOT LIVE';
+ elt('lastDisplay','Last reported '+mins+' minute(s) ago. The airplane may have moved or landed.');
+ updatedText.textContent='GitHub · delayed radar sample';
+}
 async function findTestAircraft(){
  if(testSearching)return;
- testSearching=true;testBtn.disabled=true;testBtn.textContent='Searching for nearby flights…';
- state('Searching live aircraft near Fort Wayne…');
- let reached=false, candidates=[], problems=[];
+ if(demoTimer){clearInterval(demoTimer);demoTimer=null;}
+ testSearching=true;testBtn.disabled=true;testBtn.textContent='Looking for recent aircraft…';
+ state('Checking for a recent airplane position near Fort Wayne…');
+ let candidates=[],chosenSource='';
  try{
    for(const source of sourcesForBrowser()){
      try{
        const data=await fetchSource(source.base,source.nearby);
-        const allowedAge=source.name==='GitHub sampled radar'?900:90;
-       reached=true;
+       const allowedAge=source.name==='GitHub sampled radar'?1800:90;
        candidates=data.ac.filter(ac=>{
          const reg=String(ac.r||'').trim().toUpperCase();
          const age=Number(ac.seen_pos),alt=Number(ac.alt_baro),gs=Number(ac.gs);
-         return /^[A-Z][A-Z0-9-]{2,11}$/.test(reg)&&reg!==JACK_TAIL&&
-           Number.isFinite(ac.lat)&&Number.isFinite(ac.lon)&&
+         return /^N[A-Z0-9-]{2,11}$/.test(reg)&&reg!==JACK_TAIL&&
+           Number.isFinite(Number(ac.lat))&&Number.isFinite(Number(ac.lon))&&
            Number.isFinite(age)&&age>=0&&age<=allowedAge&&
-           ac.alt_baro!=='ground'&&Number.isFinite(alt)&&alt>700&&
-           Number.isFinite(gs)&&gs>40;
+           ac.alt_baro!=='ground'&&Number.isFinite(alt)&&alt>500&&
+           Number.isFinite(gs)&&gs>25;
        });
-       if(candidates.length)break;
-     }catch(e){problems.push(source.name+': '+e.message);if(source.name==='Free radar bridge')bridgeUnavailableUntil=Date.now()+300000;}
+       if(candidates.length){chosenSource=source.name;break;}
+     }catch(e){
+       if(source.name==='Free radar bridge')bridgeUnavailableUntil=Date.now()+300000;
+     }
    }
    if(candidates.length){
-     candidates.sort((a,b)=>{
-       const score=a=>Math.pow(a.lat-41.08,2)+0.57*Math.pow(a.lon+85.14,2);
-       return score(a)-score(b);
-     });
-     const chosen=candidates[0],reg=String(chosen.r).trim().toUpperCase();
-     input.value=reg;begin(reg);
-     state(`Found ${reg}. Checking its last reported position…`);
-   }else if(reached){state('No suitable aircraft found nearby. Try again shortly.','warn');}
-   else {showRadarDiagnostics(true);state(radarProblem(problems),'warn');}
- }finally {testSearching=false;testBtn.disabled=false;testBtn.textContent='✈ Find flying plane to test';}
+     candidates.sort((a,b)=>Math.pow(a.lat-41.08,2)+0.57*Math.pow(a.lon+85.14,2)
+       -Math.pow(b.lat-41.08,2)-0.57*Math.pow(b.lon+85.14,2));
+     const chosen=candidates[0];
+     // Show the position we already fetched, avoiding a second slow API query.
+     showObservedTestPlane(chosen,chosenSource);
+   }else{
+     startDemoFlight();
+   }
+ }finally{
+   testSearching=false;testBtn.disabled=false;testBtn.textContent='✈ Find Plane / Test Map';
+ }
 }
 testBtn.addEventListener('click',findTestAircraft);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)syncMapSize()});
