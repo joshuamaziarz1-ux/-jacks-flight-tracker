@@ -52,9 +52,19 @@ try {
  const status=await page.locator('#statusText').innerText();
  console.log('Demo mode:',status);
  assert.ok(status.includes('DEMO MODE')&&status.includes('NOT A REAL AIRCRAFT'));
+ const startPoint=await page.evaluate(()=>marker.marker.getLngLat().toArray());
+ await page.waitForTimeout(1200);
+ const nextPoint=await page.evaluate(()=>marker.marker.getLngLat().toArray());
+ const traveledMeters=Math.hypot((nextPoint[0]-startPoint[0])*111195*Math.cos(startPoint[1]*Math.PI/180),
+   (nextPoint[1]-startPoint[1])*111195);
+ console.log('Simulated airplane traveled',traveledMeters.toFixed(1),'meters in 1.2 seconds');
+ assert.ok(traveledMeters>=15&&traveledMeters<=125,'demo should advance smoothly near real training-plane speeds, not jump miles');
+ assert.equal((await page.locator('#tailDisplay').innerText()),'DEMO');
  await page.screenshot({path:'webkit-tracker-demo.png',fullPage:false});
  await page.click('#stopTrackingBtn');
  assert.ok((await page.locator('#statusText').innerText()).includes('Ready.'));
+ const positionAfterStop=await page.evaluate(()=>typeof marker==='object'&&marker!==null);
+ assert.equal(positionAfterStop,false,'stop clears demo marker and cancels the animation');
  if(errors.length)console.log('Browser console observations',errors.slice(0,10).join(' || '));
  console.log('PASS iPhone-sized WebKit: vector map, both styles, idle startup and test flight.');
 }finally {
