@@ -7,7 +7,7 @@ This is a real SwiftUI + Apple MapKit iPhone application, NOT a web clip or embe
 ## Building with Xcode (macOS)
 
 1. Have Xcode 16 or later and XcodeGen installed (`brew install xcodegen`).
-2. Open a terminal in `ios` and run `xcodegen generate`.
+2. Open a terminal in `ios` and run `swift GenerateIcon.swift` and then `xcodegen generate`.
 3. Open `JacksFlightTracker.xcodeproj` in Xcode.
 4. Under **Signing & Capabilities**, select the Apple Developer Program team and, if necessary, change the bundle identifier to one registered to that team.
 5. Run on an iPhone. Confirm you see *live* position data for a currently airborne test aircraft before distributing.
@@ -16,7 +16,7 @@ This is a real SwiftUI + Apple MapKit iPhone application, NOT a web clip or embe
 
 1. Enroll in the paid Apple Developer Program if not already enrolled.
 2. In App Store Connect, create an iOS app record with the **same bundle identifier** configured in Xcode.
-3. Add a production-quality 1024×1024 App Icon asset and complete the required App Store Connect metadata.
+3. The starter 1024×1024 app icon is generated with `swift GenerateIcon.swift`; complete the required App Store Connect metadata.
 4. In Xcode choose **Product → Archive**, then **Distribute App → App Store Connect → Upload**.
 5. When processing finishes, enable your TestFlight build and invite yourself/family (internal or external testing eligibility and Apple review may apply).
 
