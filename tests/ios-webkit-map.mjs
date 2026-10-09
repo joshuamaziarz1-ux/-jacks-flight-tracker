@@ -11,7 +11,7 @@ try {
  const diagnostic=await page.evaluate(()=>({
   lib:typeof window.maplibregl,
   shim:typeof window.L,
-  supported:typeof window.maplibregl==='object'?window.maplibregl.supported():null,
+  supported:typeof window.maplibregl==='object'?(typeof window.maplibregl.supported==='function'?window.maplibregl.supported():'no supported() method'):null,
   scriptUrls:[...document.querySelectorAll('script[src]')].map(s=>s.src),
   mapHTML:document.getElementById('map')?.innerHTML.slice(0,300),
   title:document.title
