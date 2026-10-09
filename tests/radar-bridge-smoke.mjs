@@ -12,7 +12,10 @@ globalThis.fetch=async(url)=>{
    return new Response(JSON.stringify({response:{aircraft:{mode_s:'A214D5',registration:'N233ND'}}}),{status:200,headers:{'Content-Type':'application/json'}});
  }
  if(url.includes('opensky-network.org')) {
-   return new Response(JSON.stringify({time:now,states:[state]}),{status:200,headers:{'Content-Type':'application/json'}});
+   const reportedState=url.includes('icao24=a214d5')
+     ? ['a214d5','N233ND','United States',now-2,now-1,-85.02,41.19,838.2,false,28,148,0,null,840,null,false,0]
+     : state;
+   return new Response(JSON.stringify({time:now,states:[reportedState]}),{status:200,headers:{'Content-Type':'application/json'}});
  }
  throw new Error('Unexpected upstream '+url);
 };
