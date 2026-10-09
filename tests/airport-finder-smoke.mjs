@@ -44,12 +44,12 @@ byId('radarRadius').value='50';
 byId('radarRadius').dispatchEvent(new w.Event('change',{bubbles:true}));
 assert.equal(requests,1,'changing radius does not make an API call');
 assert.equal(byId('nearbyResults').children.length,0,'changing radius clears old results');
-// Advance the free provider's last-request timestamp in the test only. The
-// production app still enforces its 11-second minimum interval.
-w.eval('lastAvioCall = Date.now() - 11000');
+// Simulate enough wall-clock time for another legitimate free API request.
+// Production still enforces 11 seconds between calls.
+const realDateNow=w.Date.now;
+w.Date.now=()=>realDateNow()+12000;
 byId('testBtn').click();
 await new Promise(resolve=>setTimeout(resolve,140));
-console.log('Second radius search diagnostics',JSON.stringify({requestCount:requests,searchText:byId('nearbyResults').textContent,buttonDisabled:byId('testBtn').disabled,radius:byId('radarRadius').value,internal:w.eval('JSON.stringify({selectedAirport,testSearching,lastAvioCall})')}));
 assert.equal(byId('nearbyResults').querySelectorAll('.nearby-row').length,2,'50nm radius excludes more distant airplane');
 w.document.querySelector('[data-airport="GWB"]').click();
 assert.ok(byId('nearbyHint').textContent.includes('DeKalb County Airport'));
