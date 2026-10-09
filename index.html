@@ -17,6 +17,9 @@
 .map-reload{left:14px}.map-style{left:137px}
 .airport-finder{margin-top:15px;border:1px solid #375770;border-radius:14px;background:#0a1b2b;padding:14px;}
 .finder-title{display:block;font-size:14px;margin-bottom:10px;letter-spacing:.2px}
+.finder-radius{margin-top:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.finder-radius label{color:#c6dce8;font-size:13px;font-weight:700}
+.finder-radius select{flex:1;min-width:195px;max-width:100%;background:#162f44;border:1px solid #52718b;border-radius:9px;padding:11px;color:#effaff;font-size:13px}
 .airport-choices{display:flex;gap:8px;flex-wrap:wrap}
 .airport-choice{background:#172f44;border:1px solid #435f79;border-radius:10px;padding:10px;color:#d7e7f2;font-size:12px;font-weight:700;flex:1;min-width:115px}
 .airport-choice.selected{background:#26667a;border-color:#72dce9;color:white}
@@ -48,8 +51,16 @@
     <button type="button" class="airport-choice" data-airport="SMD" aria-pressed="false">Smith Field (KSMD)</button>
     <button type="button" class="airport-choice" data-airport="FWA" aria-pressed="false">Fort Wayne (KFWA)</button>
   </div>
-  <div class="finder-actions"><button type="button" class="airport-search-btn" id="testBtn">⌖ Find nearby aircraft</button><a id="outsideRadar" target="_blank" rel="noopener noreferrer" href="https://globe.airplanes.live/?lat=41.3072&amp;lon=-85.0605&amp;zoom=11">View live radar ↗</a></div>
-  <p class="finder-help" id="nearbyHint">DeKalb County Airport · within 30 nautical miles. Search starts only when you tap the button.</p>
+  <div class="finder-radius">
+    <label for="radarRadius">Search radius</label>
+    <select id="radarRadius" aria-label="Search radius">
+      <option value="50">50 nautical miles (~58 mi)</option>
+      <option value="75">75 nautical miles (~86 mi)</option>
+      <option value="100" selected>100 nautical miles (~115 mi) — widest free search</option>
+    </select>
+  </div>
+  <div class="finder-actions"><button type="button" class="airport-search-btn" id="testBtn">⌖ Find nearby aircraft</button><a id="outsideRadar" target="_blank" rel="noopener noreferrer" href="https://globe.airplanes.live/?lat=41.3072&amp;lon=-85.0605&amp;zoom=7">View live radar ↗</a></div>
+  <p class="finder-help" id="nearbyHint">DeKalb County Airport · searching within 100 nautical miles (~115 miles). Tap Find nearby aircraft to search.</p>
   <div id="nearbyResults" aria-live="polite" class="nearby-results"></div>
 </div>
 <div class="test-tools tracker-control">
@@ -448,15 +459,26 @@ function startDemoFlight(){
  renderDemoFrame(performance.now());
 }
 const NEARBY_AIRPORTS={
-  GWB:{code:'KGWB',label:'DeKalb County Airport',lat:41.3071975,lon:-85.0605169,radius:30},
-  SMD:{code:'KSMD',label:'Smith Field',lat:41.1433611,lon:-85.1527778,radius:25},
-  FWA:{code:'KFWA',label:'Fort Wayne International',lat:40.9784722,lon:-85.1951667,radius:30}
+  GWB:{code:'KGWB',label:'DeKalb County Airport',lat:41.3071975,lon:-85.0605169,radius:100},
+  SMD:{code:'KSMD',label:'Smith Field',lat:41.1433611,lon:-85.1527778,radius:100},
+  FWA:{code:'KFWA',label:'Fort Wayne International',lat:40.9784722,lon:-85.1951667,radius:100}
 };
 let selectedAirport='GWB',airportSearchSerial=0;
 const nearbyResults=document.getElementById('nearbyResults');
 const nearbyHint=document.getElementById('nearbyHint');
 const outsideRadar=document.getElementById('outsideRadar');
 const searchAirportBtn=document.getElementById('testBtn');
+const radarRadius=document.getElementById('radarRadius');
+function currentRadius(){return Math.min(100,Math.max(50,Number(radarRadius.value)||100));}
+function airportZoom(radius){return radius>=100?7:radius>=75?7.5:8;}
+function syncAirportSearchArea(){
+ const airport=NEARBY_AIRPORTS[selectedAirport];
+ airport.radius=currentRadius();
+ nearbyHint.textContent=airport.label+' · within '+airport.radius+' nautical miles (~'+Math.round(airport.radius*1.15078)+' miles). Tap Find nearby aircraft to search.';
+ outsideRadar.href='https://globe.airplanes.live/?lat='+airport.lat+'&lon='+airport.lon+'&zoom='+Math.round(airportZoom(airport.radius));
+ map.setView([airport.lat,airport.lon],airportZoom(airport.radius));
+ mapLabel.textContent='Near '+airport.code+' · search radius '+airport.radius+' nm';
+}
 function aircraftID(ac){
  const reg=String(ac.r||'').trim().toUpperCase();
  if(/^[A-Z0-9-]{3,12}$/.test(reg))return reg;
@@ -477,15 +499,17 @@ function selectAirport(key){
    const yes=b.dataset.airport===key;
    b.classList.toggle('selected',yes);b.setAttribute('aria-pressed',String(yes));
  }
- nearbyHint.textContent=airport.label+' · within '+airport.radius+' nautical miles. Tap Find nearby aircraft to search.';
- outsideRadar.href='https://globe.airplanes.live/?lat='+airport.lat+'&lon='+airport.lon+'&zoom=11';
  nearbyResults.replaceChildren();
- map.setView([airport.lat,airport.lon],10);
- mapLabel.textContent='Near '+airport.code+' · no new aircraft search yet';
+ syncAirportSearchArea();
 }
 for(const button of document.querySelectorAll('[data-airport]')){
  button.addEventListener('click',()=>selectAirport(button.dataset.airport));
 }
+radarRadius.addEventListener('change',()=>{
+ ++airportSearchSerial;
+ nearbyResults.replaceChildren();
+ syncAirportSearchArea();
+});
 function showObservedTestPlane(record,source){
  clearTrack();
  const reg=aircraftID(record);
@@ -574,7 +598,7 @@ async function findTestAircraft(){
    }else{
      nearbyResults.replaceChildren();
      const result=document.createElement('div');result.className='nearby-note';
-     result.textContent='No recent aircraft positions available from our connected free feeds near '+airport.code+'. This does not mean the sky is empty. Try View live radar for a broader public map.';
+     result.textContent='No recent aircraft positions returned by the connected free feeds within '+airport.radius+' nautical miles of '+airport.code+'. This does NOT mean no planes are flying. View live radar uses a different receiver network and may show additional aircraft.';
      nearbyResults.append(result);
      if(errors.length)nearbyHint.textContent='Some providers are blocked or unavailable. Open the external radar link to see nearby traffic.';
      state('No recent report available near '+airport.code+'. External live radar is available below.','warn');
