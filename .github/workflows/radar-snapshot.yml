@@ -1,0 +1,80 @@
+name: Update Free Fort Wayne Radar Snapshot
+on:
+  schedule:
+    # Free GitHub Actions supports intervals no shorter than 5 minutes.
+    - cron: '2-59/5 * * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/radar-snapshot.yml'
+permissions:
+  contents: write
+concurrency:
+  group: free-radar-snapshot
+  cancel-in-progress: false
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Fetch ADSB.lol data without keys or other paid services
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json,time,datetime,urllib.request,sys,os
+          url='https://api.adsb.lol/v2/point/41.13/-85.14/125'
+          raw=None
+          for attempt in range(2):
+            try:
+              req=urllib.request.Request(url,headers={'Accept':'application/json','User-Agent':'Jack-Flight-Tracker-personal-hobby/1.0'})
+              with urllib.request.urlopen(req,timeout=20) as response:
+                if response.status!=200:raise RuntimeError('HTTP '+str(response.status))
+                raw=json.load(response)
+              if not isinstance(raw,dict) or not isinstance(raw.get('ac'),list):
+                raise RuntimeError('Response missing aircraft list')
+              print('Provider response:',len(raw['ac']),'aircraft')
+              break
+            except Exception as exc:
+              print('Provider temporarily unavailable:',str(exc)[:150],flush=True)
+              if attempt==0:time.sleep(5)
+          if raw is None:
+            print('No update; leave the previous snapshot untouched.',flush=True)
+            sys.exit(0)
+          planes=[]
+          for row in raw['ac']:
+            if not isinstance(row,dict):continue
+            reg=str(row.get('r') or '').strip().upper()
+            if not (2<=len(reg)<=12 and reg.startswith('N')):continue
+            lat,lon=row.get('lat'),row.get('lon')
+            if not isinstance(lat,(int,float)) or not isinstance(lon,(int,float)):continue
+            if not (40<lat<43 and -87<lon<-83):continue
+            planes.append({key:row.get(key) for key in ('r','hex','flight','t','lat','lon','alt_baro','gs','track','seen_pos') if key in row})
+          planes=sorted(planes,key=lambda p:(p.get('r') not in ('N233ND','N278DC'),p.get('r','')))
+          payload={
+            'source':'adsb.lol via GitHub cached snapshot',
+            'license':'ODbL-1.0',
+            'attribution':'https://www.adsb.lol/',
+            'fetchedAt':datetime.datetime.now(datetime.timezone.utc).isoformat(timespec='seconds'),
+            'now':raw.get('now'),
+            'ac':planes
+          }
+          outfile=os.path.join(os.environ['RUNNER_TEMP'],'fort-wayne.json')
+          with open(outfile,'w') as out:json.dump(payload,out,separators=(',',':'))
+          print('Filtered nearby N-registered aircraft:',len(planes),'file bytes:',os.path.getsize(outfile),flush=True)
+          PY
+      - name: Publish small snapshot on independent Git branch
+        shell: bash
+        run: |
+          test -f "$RUNNER_TEMP/fort-wayne.json" || exit 0
+          git init -q /tmp/radar-snapshot
+          cd /tmp/radar-snapshot
+          git config user.name "Jack's Radar Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          cp "$RUNNER_TEMP/fort-wayne.json" fort-wayne.json
+          git add fort-wayne.json
+          git commit -qm "Update 5-minute sampled aircraft positions"
+          # Force-update the ONE-COMMIT snapshot branch, avoiding huge history
+          # and avoiding a main-branch commit / Pages build every 5 minutes.
+          git push --force origin HEAD:refs/heads/radar-data
