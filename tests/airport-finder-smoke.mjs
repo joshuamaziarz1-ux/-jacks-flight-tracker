@@ -49,6 +49,7 @@ assert.equal(byId('nearbyResults').children.length,0,'changing radius clears old
 w.eval('lastAvioCall = Date.now() - 11000');
 byId('testBtn').click();
 await new Promise(resolve=>setTimeout(resolve,140));
+console.log('Second radius search diagnostics',JSON.stringify({requestCount:requests,searchText:byId('nearbyResults').textContent,buttonDisabled:byId('testBtn').disabled,airport:selectedAirport,radius:byId('radarRadius').value,searching:testSearching,lastCall:lastAvioCall}));
 assert.equal(byId('nearbyResults').querySelectorAll('.nearby-row').length,2,'50nm radius excludes more distant airplane');
 w.document.querySelector('[data-airport="GWB"]').click();
 assert.ok(byId('nearbyHint').textContent.includes('DeKalb County Airport'));
