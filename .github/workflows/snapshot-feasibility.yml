@@ -14,12 +14,13 @@ jobs:
           python3 - <<'PY'
           import urllib.request,urllib.error,json
           for name,url in [
+              ('ADSB.fi Fort Wayne','https://opendata.adsb.fi/api/v3/lat/41.13/lon/-85.14/dist/125'),
               ('ADSB.lol Fort Wayne','https://api.adsb.lol/v2/point/41.13/-85.14/125'),
               ('GitHub RAW CORS','https://raw.githubusercontent.com/joshuamaziarz1-ux/-jacks-flight-tracker/main/index.html')
           ]:
             req=urllib.request.Request(url,headers={'Accept':'application/json','Origin':'https://joshuamaziarz1-ux.github.io'})
             try:
-              with urllib.request.urlopen(req,timeout=18) as resp:
+              with urllib.request.urlopen(req,timeout=22) as resp:
                 print(name,'HTTP',resp.status,'CORS',resp.headers.get('access-control-allow-origin'),'Type',resp.headers.get('content-type'))
                 if name.startswith('ADSB'):
                   data=json.load(resp)
