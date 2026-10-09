@@ -10,6 +10,7 @@ struct TrackerView: View {
         )
     )
     @FocusState private var searchFocused: Bool
+    @State private var autoRefreshEnabled = false
 
     var body: some View {
         ZStack {
@@ -34,14 +35,17 @@ struct TrackerView: View {
             }
             .scrollDismissesKeyboard(.interactively)
         }
-        .task {
-            await store.refresh()
+        // Nothing is checked on launch. Poll ONLY if explicitly switched on
+        // for the one selected airplane; saved aircraft are just bookmarks.
+        .task(id: "\(autoRefreshEnabled)-\(store.watchedTail)") {
+            guard autoRefreshEnabled && !store.watchedTail.isEmpty else { return }
             while !Task.isCancelled {
                 do {
-                    try await Task.sleep(nanoseconds: 30_000_000_000)
+                    try await Task.sleep(nanoseconds: 60_000_000_000)
                 } catch {
                     break
                 }
+                if Task.isCancelled { break }
                 await store.refresh()
             }
         }
@@ -159,14 +163,14 @@ struct TrackerView: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(store.watchedTail)
+                    Text(store.watchedTail.isEmpty ? "NO PLANE SELECTED" : store.watchedTail)
                         .font(.system(size: 27, weight: .bold, design: .rounded))
                     Text(store.aircraft?.model.isEmpty == false ? store.aircraft!.model : "Aircraft tracker")
                         .font(.subheadline)
                         .foregroundStyle(.white.opacity(0.62))
                 }
                 Spacer()
-                Text(store.aircraft?.isLive == true ? "LIVE DATA" : "NOT LIVE")
+                Text(store.watchedTail.isEmpty ? "IDLE" : (store.aircraft?.isLive == true ? "LIVE DATA" : "NOT LIVE"))
                     .font(.system(size: 10, weight: .black))
                     .tracking(1)
                     .foregroundStyle(store.aircraft?.isLive == true ? .green : .orange)
@@ -244,12 +248,28 @@ struct TrackerView: View {
             Button {
                 Task { await store.refresh() }
             } label: {
-                Label(store.isLoading ? "Checking…" : "Refresh Position", systemImage: "arrow.clockwise")
+                Label(store.isLoading ? "Checking…" : "Check Selected Plane Now", systemImage: "arrow.clockwise")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.plain)
             .foregroundStyle(.cyan)
-            .disabled(store.isLoading || store.isFindingTestPlane)
+            .disabled(store.watchedTail.isEmpty || store.isLoading || store.isFindingTestPlane)
+
+            Toggle("Auto-refresh selected plane every 60 seconds", isOn: $autoRefreshEnabled)
+                .font(.caption)
+                .tint(.cyan)
+                .disabled(store.watchedTail.isEmpty)
+
+            Button {
+                autoRefreshEnabled = false
+                store.stopTracking()
+            } label: {
+                Label("Stop Tracking", systemImage: "stop.circle")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .tint(.white)
+            .disabled(store.watchedTail.isEmpty)
         }
     }
 
