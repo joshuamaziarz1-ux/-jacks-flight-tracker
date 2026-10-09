@@ -12,15 +12,22 @@ jobs:
       - name: Check Cloudflare Worker health, aircraft feed and CORS
         run: |
           python3 - <<'PY'
-          import urllib.request, json
+          import urllib.request, urllib.error, json
           base='https://jacks-radar.joshua-maziarz1.workers.dev'
           origin='https://joshuamaziarz1-ux.github.io'
           for path in ('/health', '/api/aircraft/N278DC', '/api/nearby'):
               req=urllib.request.Request(base+path,headers={'Origin':origin,'Accept':'application/json'})
-              with urllib.request.urlopen(req,timeout=25) as resp:
-                  assert resp.status==200, f'{path} returned {resp.status}'
-                  assert resp.headers.get('Access-Control-Allow-Origin')==origin, f'{path} lacks correct CORS'
-                  body=json.load(resp)
+              try:
+                  with urllib.request.urlopen(req,timeout=25) as resp:
+                      print('HTTP:',resp.status,'url:',path, flush=True)
+                      print('CORS:',resp.headers.get('Access-Control-Allow-Origin'), flush=True)
+                      assert resp.status==200, f'{path} returned {resp.status}'
+                      assert resp.headers.get('Access-Control-Allow-Origin')==origin, f'{path} lacks correct CORS'
+                      body=json.load(resp)
+              except urllib.error.HTTPError as e:
+                  print('REMOTE HTTP ERROR:',path,e.code,'server:',e.headers.get('Server'),
+                        'ray:',e.headers.get('Cf-Ray'), 'body:',e.read(500).decode('utf-8','replace'),flush=True)
+                  raise
               if path=='/health':
                   assert body.get('service')=='jacks-flight-tracker-radar'
                   print('PASS health: deployed and ready')
