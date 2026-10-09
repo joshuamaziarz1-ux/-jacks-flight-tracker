@@ -332,7 +332,14 @@ const demoRoute=demoSteps.map((p,i)=>{
 let demoSegment=0,demoDistance=0,demoClock=0,demoLastFrame=0,demoLastPoint=0,demoLastStats=0;
 function renderDemoFrame(now){
  if(activeTail!=='DEMO')return;
- const delta=demoLastFrame?Math.min(.12,Math.max(0,(now-demoLastFrame)/1000)):0;
+ // Keep the demo paused in background tabs. When visible, distance traveled
+ // depends on actual elapsed time, never the number of frames rendered.
+ if(document.hidden){
+   demoLastFrame=now;
+   demoTimer=requestAnimationFrame(renderDemoFrame);
+   return;
+ }
+ const delta=demoLastFrame?Math.min(2,Math.max(0,(now-demoLastFrame)/1000)):0;
  demoLastFrame=now;
  demoClock+=delta;
  // Advance distance at the training airplane's published simulation speed.
