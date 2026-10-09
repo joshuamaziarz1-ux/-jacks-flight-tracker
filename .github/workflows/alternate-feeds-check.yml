@@ -1,0 +1,36 @@
+name: Check Alternate Free Flight Feeds
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/alternate-feeds-check.yml']
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check approved public API alternatives
+        run: |
+          python3 - <<'PY'
+          import urllib.request,urllib.error,json
+          tests=[
+            ('OpenSky N278DC by ICAO','https://opensky-network.org/api/states/all?icao24=a2c482'),
+            ('OpenSky Fort Wayne bbox','https://opensky-network.org/api/states/all?lamin=40.75&lomin=-85.8&lamax=41.8&lomax=-84.55'),
+            ('AvioADSB N278DC','https://avioadsb.org/v1/reg/N278DC'),
+            ('AvioADSB nearby Fort Wayne','https://avioadsb.org/v1/point/41.13/-85.14/80'),
+            ('ADSBdb registration metadata','https://api.adsbdb.com/v0/aircraft/N233ND')
+          ]
+          for label,url in tests:
+            print('CHECK:',label,flush=True)
+            try:
+              req=urllib.request.Request(url,headers={'Accept':'application/json','User-Agent':'JacksFlightTracker-HobbyProject/1.0'})
+              with urllib.request.urlopen(req,timeout=12) as r:
+                b=r.read(25000)
+                print('HTTP',r.status,'Type:',r.headers.get('Content-Type'),flush=True)
+              try:
+                j=json.loads(b)
+                print('Result:',json.dumps({'aircraft':len(j.get('ac',[])) if isinstance(j,dict) else '?','states':len(j.get('states') or []) if isinstance(j,dict) else '?','registration':j.get('response',{}).get('aircraft',{}).get('registration') if isinstance(j,dict) and isinstance(j.get('response'),dict) else None}),flush=True)
+              except Exception:print('Could not read JSON',flush=True)
+            except urllib.error.HTTPError as e:
+              print('HTTP ERROR:',e.code,'Retry after:',e.headers.get('retry-after'),flush=True)
+            except Exception as e:print('NETWORK ERROR',type(e).__name__,str(e)[:160],flush=True)
+          PY
