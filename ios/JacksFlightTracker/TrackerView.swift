@@ -18,6 +18,7 @@ struct TrackerView: View {
                 VStack(alignment: .leading, spacing: 18) {
                     header
                     searchCard
+                    SavedAircraftView(tracker: store)
                     mapCard
                     aircraftCard
                     buttons
@@ -25,7 +26,7 @@ struct TrackerView: View {
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.52))
                         .fixedSize(horizontal: false, vertical: true)
-                    Text("Aircraft data: adsb.lol · ODbL 1.0")
+                    Text("Aircraft data: adsb.fi (personal use) / adsb.lol (ODbL 1.0)")
                         .font(.caption2)
                         .foregroundStyle(.white.opacity(0.42))
                 }
