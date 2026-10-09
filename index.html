@@ -76,26 +76,25 @@ const autoRefreshToggle=document.getElementById('autoRefreshToggle');
 const map = L.map('map', {zoomControl:true,fadeAnimation:false,zoomAnimation:false}).setView([41.1,-85.15], 9);
 // USGS Topo is a public U.S. government basemap. Streets uses OSM standard tiles.
 // Users can switch between the two if their browser has trouble loading a provider.
-const mapTiles=L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',{
+const topoTiles=L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',{
  attribution:'Tiles: <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map" target="_blank">USGS The National Map</a>',
  maxZoom:16,updateWhenIdle:false,keepBuffer:2
-}).addTo(map);
+});
+const streetTiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+ attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
+ maxZoom:19,updateWhenIdle:false,keepBuffer:2
+});
+let mapTiles=topoTiles.addTo(map);
 let activeMapStyle='topo';
 const mapStyleBtn=document.getElementById('mapStyleBtn');
 function chooseMapStyle(style){
+ if(style===activeMapStyle)return;
+ map.removeLayer(mapTiles);
  activeMapStyle=style;
- if(style==='streets'){
-   mapTiles.setUrl('https://tile.openstreetmap.org/{z}/{x}/{y}.png',false);
-   mapTiles.options.attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>';
-   mapTiles.options.maxZoom=19;
-   mapStyleBtn.textContent='Map: Streets ▾';
- }else{
-   mapTiles.setUrl('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',false);
-   mapTiles.options.attribution='Tiles: <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map">USGS The National Map</a>';
-   mapTiles.options.maxZoom=16;
-   mapStyleBtn.textContent='Map: Topo ▾';
- }
- mapTiles.redraw();map.invalidateSize({pan:false,animate:false});
+ mapTiles=style==='streets'?streetTiles:topoTiles;
+ mapTiles.addTo(map);
+ mapStyleBtn.textContent=style==='streets'?'Map: Streets ▾':'Map: Topo ▾';
+ map.invalidateSize({pan:false,animate:false});
 }
 mapStyleBtn.addEventListener('click',()=>chooseMapStyle(activeMapStyle==='topo'?'streets':'topo'));
 // Mobile webviews often resize after Leaflet initializes, leaving empty squares.
