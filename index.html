@@ -63,7 +63,7 @@ const backBtn = document.getElementById('backBtn');
 const map = L.map('map', {zoomControl:true,fadeAnimation:false,zoomAnimation:false}).setView([41.1,-85.15], 9);
 const mapTiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
  attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap contributors</a>',
- maxZoom:19,updateWhenIdle:false,keepBuffer:3,crossOrigin:true
+ maxZoom:19,updateWhenIdle:false,keepBuffer:3
 }).addTo(map);
 // Mobile webviews often resize after Leaflet initializes, leaving empty squares.
 function syncMapSize(){if(!document.hidden)map.invalidateSize({pan:false,animate:false})}
