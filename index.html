@@ -274,6 +274,7 @@ function clearTrack(){
  requestSerial++;
  activeTail='';
  activeFetch=false;
+ autoRefreshToggle.checked=false;
  if(timer){clearInterval(timer);timer=null;}
  if(marker){map.removeLayer(marker);marker=null;}
  if(trail){map.removeLayer(trail);trail=null;}
