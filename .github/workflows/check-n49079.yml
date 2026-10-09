@@ -1,0 +1,33 @@
+name: Check N49079 Source Coverage
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/check-n49079.yml']
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Identify whether free radar feeds carry N49079
+        run: |
+          python3 - <<'PY'
+          import urllib.request,urllib.error,json
+          sources=[
+            ('ADSB.lol registration','https://api.adsb.lol/v2/reg/N49079'),
+            ('ADSB.lol 125nm DeKalb','https://api.adsb.lol/v2/point/41.3072/-85.0605/125'),
+            ('Airplanes.live registration','https://api.airplanes.live/v2/reg/N49079'),
+            ('AvioADSB registration','https://avioadsb.org/v1/reg/N49079'),
+            ('ADSBdb registration','https://api.adsbdb.com/v0/aircraft/N49079')
+          ]
+          for label,url in sources:
+            try:
+              req=urllib.request.Request(url,headers={'Accept':'application/json'})
+              with urllib.request.urlopen(req,timeout=15) as resp:
+                data=json.load(resp)
+                ac=data.get('ac',[]) if isinstance(data,dict) else []
+                target=[{k:v for k,v in a.items() if k in ('r','hex','lat','lon','seen_pos','alt_baro','gs','type','t','flight')} for a in ac if str(a.get('r') or '').upper()=='N49079']
+                print(label,'HTTP',resp.status,'TOTAL',len(ac),'N49079',json.dumps(target[:3]),'Registry',json.dumps(data.get('response',{}).get('aircraft',{}))[:350] if isinstance(data,dict) and label.startswith('ADSBdb') else '',flush=True)
+            except urllib.error.HTTPError as e:print(label,'HTTP',e.code,flush=True)
+            except Exception as e:print(label,type(e).__name__,str(e)[:130],flush=True)
+          PY
