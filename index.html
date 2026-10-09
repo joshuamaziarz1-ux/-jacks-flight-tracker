@@ -94,8 +94,10 @@ const FREE_SOURCES = [
 // The Cloudflare Worker remains first but is skipped briefly after upstream failures.
 let bridgeUnavailableUntil=0, lastAvioCall=0, avioQueue=Promise.resolve();
 function sourcesForBrowser(){
- let bridge='https://jacks-radar.joshua-maziarz1.workers.dev';
- try{bridge=localStorage.getItem('jft.radar.bridge.url.v1')||bridge}catch(_){}
+ // Cloudflare's current upstream is timing out. Use it only if manually
+ // enabled in settings; do not delay the working browser/data snapshot.
+ let bridge='';
+ try{bridge=localStorage.getItem('jft.radar.bridge.url.v1')||''}catch(_){}
  const sources=[];
  if(/^https:\/\/[a-z0-9][a-z0-9.-]+(?::\d+)?$/i.test(bridge) && Date.now()>bridgeUnavailableUntil){
    sources.push({name:'Free radar bridge',base:bridge,registration:(tail)=>'/api/aircraft/'+encodeURIComponent(tail),nearby:'/api/nearby'});
