@@ -18,8 +18,8 @@ w.clearInterval=()=>{clearedIntervals++};
 const map={setView(){return this},whenReady(cb){cb()},invalidateSize(){},removeLayer(){removedLayers++},panTo(){}};
 function layer(){return {addTo(){return this},on(){return this},redraw(){},setUrl(){}}}
 w.L={map:()=>map,tileLayer:()=>layer(),marker:()=>layer(),polyline:()=>layer(),divIcon:()=>({})};
-w.eval(inline);
-w.eval(readFileSync('saved-aircraft.js','utf8'));
+// Both scripts share one page's lexical environment in a browser.
+w.eval(inline+'\n'+readFileSync('saved-aircraft.js','utf8'));
 const id=name=>w.document.getElementById(name);
 assert.equal(fetchCalls,0,'opening page makes zero aircraft requests');
 assert.equal(intervalCalls,0,'opening page starts no polling timers');
