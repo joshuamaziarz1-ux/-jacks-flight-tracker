@@ -1,0 +1,31 @@
+name: Build iOS App
+on:
+  push:
+    branches: [main]
+    paths:
+      - "ios/**"
+      - ".github/workflows/ios-build.yml"
+  workflow_dispatch:
+
+jobs:
+  simulator-build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install XcodeGen
+        run: brew install xcodegen
+      - name: Generate Xcode project
+        run: |
+          cd ios
+          xcodegen generate
+      - name: Build for iOS Simulator
+        run: |
+          xcodebuild -project ios/JacksFlightTracker.xcodeproj -scheme JacksFlightTracker -configuration Debug -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' CODE_SIGNING_ALLOWED=NO build
+      - name: Upload project files
+        uses: actions/upload-artifact@v4
+        with:
+          name: JacksFlightTracker-Xcode-project
+          path: |
+            ios/JacksFlightTracker.xcodeproj
+            ios/JacksFlightTracker
+            ios/project.yml
