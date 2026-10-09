@@ -16,6 +16,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.joshuamaziarz.jacksflighttracker
         TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: "AppIcon"
         GENERATE_INFOPLIST_FILE: "YES"
         INFOPLIST_KEY_CFBundleDisplayName: "Jack's Flight Tracker"
         INFOPLIST_KEY_UILaunchScreen_Generation: "YES"
