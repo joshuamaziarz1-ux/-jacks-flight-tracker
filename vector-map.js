@@ -21,7 +21,7 @@
 
   class Map {
     constructor(id) {
-      if (!global.maplibregl || !global.maplibregl.supported()) {
+      if (!global.maplibregl || typeof global.maplibregl.Map !== 'function' || (typeof global.maplibregl.supported === 'function' && !global.maplibregl.supported())) {
         const elem=document.getElementById(id);
         if(elem) {
           elem.textContent='This browser cannot display the vector map. Try Safari or another modern browser.';
