@@ -72,7 +72,9 @@ function sourcesForBrowser(){
  if(/^https:\/\/[a-z0-9][a-z0-9.-]+(?::\d+)?$/i.test(bridge)){
    return [{name:'Free radar bridge',base:bridge,registration:(tail)=>'/api/aircraft/'+encodeURIComponent(tail),nearby:'/api/nearby'}];
  }
- return FREE_SOURCES;
+ // Free providers do not permit CORS requests from GitHub Pages.
+ // Avoid slow repeated failed requests; use the user's own free bridge instead.
+ return [];
 }
 let activeTail = '', timer = null, marker = null, trail = null, sessionPath = [], lastPosition = null, requestSerial = 0, activeFetch = false, testSearching = false;
 function elt(id,v){document.getElementById(id).textContent=v;}
@@ -131,7 +133,7 @@ async function update(){
    elt('tailDisplay',tail);
    if(lastPosition){state('No current signal — showing last position from this session.','warn');mapLabel.textContent='Last known position — not live';elt('lastDisplay','Aircraft not found in the latest update. Saved map position is not live.');}
    else {state('Not currently visible on public flight tracking.','warn');mapLabel.textContent='Awaiting an aircraft position';elt('typeDisplay','No live signal available');elt('lastDisplay','The aircraft may be on the ground, out of coverage, or not broadcasting a usable position.');}
- } else {state('Free aircraft data could not be reached. No API key is needed; service access may be blocked or temporarily down.','warn');updatedText.textContent='Connection unavailable';if(lastPosition){mapLabel.textContent='Last known position — not live';elt('lastDisplay','Connection failed — map position is not live.');}else elt('lastDisplay','This browser may not have permission to read a public aircraft feed directly. A free proxy may be needed; no paid API key is required.');}
+ } else {state(sourcesForBrowser().length ? 'Free radar bridge is temporarily unavailable. Try again.':'To see live airplanes here, connect the free radar bridge in My Aircraft settings.','warn');updatedText.textContent='Connection unavailable';if(lastPosition){mapLabel.textContent='Last known position — not live';elt('lastDisplay','Connection failed — map position is not live.');}else elt('lastDisplay','This browser may not have permission to read a public aircraft feed directly. A free proxy may be needed; no paid API key is required.');}
  activeFetch=false;btn.disabled=false;
 }
 function begin(tail){
@@ -178,7 +180,7 @@ async function findTestAircraft(){
      input.value=reg;begin(reg);
      state(`Found ${reg}. Checking its latest position…`);
    }else if(reached){state('No suitable aircraft found nearby. Try again shortly.','warn');}
-   else {state('Free aircraft data unavailable. No key is needed; try again shortly.','warn');}
+   else {state(sourcesForBrowser().length ? 'Free radar bridge is unavailable. Try again shortly.' : 'Set up the free radar bridge in My Aircraft settings to find live planes.','warn');}
  }finally {testSearching=false;testBtn.disabled=false;testBtn.textContent='✈ Find flying plane to test';}
 }
 testBtn.addEventListener('click',findTestAircraft);
