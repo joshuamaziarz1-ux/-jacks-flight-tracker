@@ -1,0 +1,23 @@
+name: Lookup Saved Plane ICAO Addresses
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/plane-icao-check.yml']
+  workflow_dispatch:
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Look up saved registrations at free aircraft registry
+        run: |
+          python3 - <<'PY'
+          import json,urllib.request
+          for tail in ('N233ND','N278DC'):
+            print('TAIL',tail,flush=True)
+            req=urllib.request.Request('https://api.adsbdb.com/v0/aircraft/'+tail,headers={'Accept':'application/json'})
+            try:
+              with urllib.request.urlopen(req,timeout=12) as r: data=json.load(r)
+              aircraft=data.get('response',{}).get('aircraft',{})
+              print('ICAO',aircraft.get('mode_s'),'REG',aircraft.get('registration'),'TYPE',aircraft.get('icao_type'),flush=True)
+            except Exception as e:print('ERROR',type(e).__name__,str(e),flush=True)
+          PY
