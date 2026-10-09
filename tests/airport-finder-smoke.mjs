@@ -10,7 +10,7 @@ let requests=0;
 const ac=[
  {r:'N9123A',hex:'a34567',lat:41.146,lon:-85.15,gs:83,alt_baro:2500,track:90,seen_pos:3,t:'C172'},
  {r:'N278DC',hex:'a2c482',lat:41.306,lon:-85.061,gs:65,alt_baro:1000,track:100,seen_pos:4,t:'DV20'},
- {r:'N99999',hex:'aaaaaa',lat:42.55,lon:-87.2,gs:100,alt_baro:3200,track:60,seen_pos:2,t:'C172'}
+ {r:'N99999',hex:'aaaaaa',lat:42.05,lon:-85.2,gs:100,alt_baro:3200,track:60,seen_pos:2,t:'C172'}
 ];
 w.fetch=async(url)=>{requests++;if(String(url).includes('avioadsb.org'))return {ok:true,json:async()=>({ac})};throw Error('Unexpected '+url)};
 w.setInterval=()=>99;w.clearInterval=()=>{};
@@ -20,6 +20,8 @@ w.L={map:()=>map,tileLayer:layer,marker:layer,polyline:layer,divIcon:o=>o};
 w.eval(inline+'\n'+readFileSync('saved-aircraft.js','utf8'));
 const byId=x=>w.document.getElementById(x);
 assert.equal(requests,0,'no automatic requests on app startup');
+assert.equal(byId('radarRadius').value,'100','100 nautical miles is the default widest free radius');
+assert.ok(byId('nearbyHint').textContent.includes('100 nautical miles'),'wide search explained from the beginning');
 const smith=w.document.querySelector('[data-airport="SMD"]');
 assert.ok(smith,'Smith Field selection exists');
 smith.click();
@@ -29,7 +31,7 @@ assert.ok(byId('outsideRadar').href.includes('41.1433611'),'external live radar 
 byId('testBtn').click();
 await new Promise(resolve=>setTimeout(resolve,140));
 const rows=byId('nearbyResults').querySelectorAll('.nearby-row');
-assert.equal(rows.length,2,'flight list filters by the selected airport radius');
+assert.equal(rows.length,3,'default 100nm search includes aircraft outside the original 25nm circle');
 assert.ok(rows[0].textContent.includes('N9123A'),'closest aircraft listed first');
 assert.ok(rows[0].textContent.includes('KSMD'));
 rows[0].querySelector('button').click();
@@ -38,8 +40,15 @@ assert.ok(byId('statusText').textContent.includes('RECENT PUBLIC RADAR'));
 assert.equal(byId('autoRefreshToggle').checked,false);
 assert.equal(requests,1,'selecting a reported aircraft does not trigger a duplicate API call');
 byId('stopTrackingBtn').click();
+byId('radarRadius').value='50';
+byId('radarRadius').dispatchEvent(new w.Event('change',{bubbles:true}));
+assert.equal(requests,1,'changing radius does not make an API call');
+assert.equal(byId('nearbyResults').children.length,0,'changing radius clears old results');
+byId('testBtn').click();
+await new Promise(resolve=>setTimeout(resolve,140));
+assert.equal(byId('nearbyResults').querySelectorAll('.nearby-row').length,2,'50nm radius excludes more distant airplane');
 w.document.querySelector('[data-airport="GWB"]').click();
 assert.ok(byId('nearbyHint').textContent.includes('DeKalb County Airport'));
 assert.equal(byId('nearbyResults').children.length,0,'new airport clears old results');
-assert.equal(requests,1,'airport switches remain entirely manual');
+assert.equal(requests,2,'airport and radius switches remain entirely manual; only explicit searches use the API');
 console.log('PASS KGWB / KSMD browser list, real positions, nearest sorting, manual track, no auto polling');
