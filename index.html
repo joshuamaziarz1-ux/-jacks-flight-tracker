@@ -7,7 +7,7 @@
 <title>Jack's Flight Tracker</title>
 <link rel="preconnect" href="https://unpkg.com">
 <link rel="stylesheet" href="./saved-aircraft.css?v=1">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzx78DPbJbY+2jOs3u3I+P9TzM=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.12.0/dist/maplibre-gl.css">
 <style>
 :root {color-scheme: dark;--bg:#08121f;--surface:#102033;--surface2:#15283e;--border:#263e58;--text:#eef5ff;--muted:#9eb3ca;--cyan:#59d5e7;--accent:#f2bc56;--ok:#74dda8;--warn:#ffd184;}
 * {box-sizing:border-box} body {margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;} button,input{font:inherit} button{cursor:pointer} .page{min-height:100dvh;display:flex;flex-direction:column} .shell{width:min(100%,1180px);margin:0 auto;padding:22px clamp(15px,3vw,28px) 12px} .head{display:flex;gap:14px;align-items:center;justify-content:space-between;margin-bottom:23px} .brand{display:flex;align-items:center;gap:12px} .logo{height:43px;width:43px;border-radius:14px;display:grid;place-items:center;background:#19354a;border:1px solid #326078;color:var(--cyan);font-size:22px} h1{font-size:clamp(23px,3vw,30px);margin:0;letter-spacing:-.8px} .sub{font-size:13px;color:var(--muted);margin-top:4px} .tag{font-size:11px;letter-spacing:1.5px;color:var(--muted);white-space:nowrap} .search-panel{border:1px solid var(--border);background:var(--surface);padding:17px;border-radius:17px;margin-bottom:15px} .label{display:block;color:var(--muted);font-weight:600;font-size:13px;letter-spacing:.2px;margin-bottom:9px} .form-row{display:flex;gap:9px} .searchbox{min-width:0;flex:1;background:#0a1829;border:1px solid #3a5670;color:var(--text);border-radius:11px;padding:14px 15px;font-size:17px;text-transform:uppercase;letter-spacing:1px} .searchbox:focus{outline:2px solid var(--cyan);outline-offset:1px} .main-btn{background:var(--cyan);color:#052131;border:0;font-weight:800;border-radius:11px;padding:0 21px;white-space:nowrap} .main-btn:disabled{opacity:.65;cursor:wait} .helper{font-size:12px;color:var(--muted);margin:10px 0 0} .status-bar{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:0 3px 13px;min-height:40px} .status{display:flex;gap:9px;align-items:center;font-size:13px;line-height:1.4} .dot{height:8px;width:8px;border-radius:50%;background:#7b90a5;flex-shrink:0} .dot.live{background:var(--ok);box-shadow:0 0 10px #74dda888}.dot.warn{background:var(--warn)} .source{color:var(--muted);font-size:11px;text-align:right} .layout{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:14px;min-height:430px;flex:1} .map-wrap{min-width:0;position:relative;border:1px solid var(--border);border-radius:17px;overflow:hidden;background:var(--surface);height:min(72vh,680px);min-height:440px} #map{width:100%;height:100%;min-height:0;background:#e9eff2} .map-overlay{pointer-events:none;position:absolute;top:16px;left:16px;z-index:500;display:flex;gap:7px;align-items:center;background:#091726e8;color:#d9eafa;border:1px solid #39506b;padding:9px 12px;border-radius:10px;font-size:12px;font-weight:700;max-width:calc(100% - 32px)} .map-control{position:absolute;right:14px;bottom:23px;z-index:500;min-height:37px;background:#101f32ee;border:1px solid #42617b;border-radius:9px;color:#f0f8ff;padding:8px 11px;font-weight:700;font-size:12px} .side{display:flex;flex-direction:column;gap:12px} .card{background:var(--surface);border:1px solid var(--border);border-radius:17px;padding:18px} .card-label{font-size:11px;color:var(--muted);letter-spacing:1.4px;font-weight:700;text-transform:uppercase} .tail{font-size:29px;font-weight:800;margin-top:13px;letter-spacing:1px} .aircraft{color:var(--muted);font-size:13px;margin-top:3px;min-height:19px} .stats{display:grid;grid-template-columns:1fr 1fr;gap:15px;margin-top:23px} .value{font-weight:800;font-size:23px;margin:5px 0 2px;letter-spacing:-.5px} .unit{font-size:12px;color:var(--muted)} .last{text-align:left;font-size:12px;color:var(--muted);margin-top:19px;padding-top:14px;border-top:1px solid var(--border);line-height:1.5} .notice{font-size:12px;line-height:1.55;color:var(--muted)} .notice strong{color:#e4eefb} footer{font-size:11px;color:#7991a7;padding:17px 0 9px;line-height:1.5} footer a{color:#afccdb} .plane-pin{height:38px;width:38px;display:grid;place-items:center;filter:drop-shadow(0 3px 6px #0009)} .plane-pin svg{width:34px;height:34px;stroke:white;stroke-width:1.5;paint-order:stroke;fill:#52dce8;transform-origin:50% 50%} .leaflet-container{font-family:inherit} .leaflet-control-attribution{background:#0a1726dd!important;color:#b6c3d2!important} .leaflet-control-attribution a{color:#8ad8ee!important}.leaflet-control-zoom a{background:#12263b!important;color:white!important;border-color:#47627b!important} .test-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px}.minor-btn{padding:8px 12px;border-radius:9px;border:1px solid #47627b;background:#192f43;color:#e1f0fa;font-size:12px;font-weight:700}.minor-btn:disabled{opacity:.6}.back-btn{background:transparent;color:var(--cyan);border:0;font-size:12px;font-weight:700;padding:8px 4px}.hidden{display:none!important}
@@ -54,10 +54,11 @@
  </section>
  <div class="status-bar"><div class="status" role="status" aria-live="polite"><span id="dot" class="dot"></span><span id="statusText">Ready. Select an aircraft to check its position.</span></div><div class="source" id="updatedText">No aircraft selected</div></div>
 <div id="radarDiagnostic" class="diagnostic-note hidden">Live radar is not responding. <a href="./radar-test.html">Run radar and map checks →</a> and send a screenshot of the results.</div>
-<div class="layout"><section class="map-wrap" aria-label="Aircraft map"><div id="map"></div><div class="map-overlay"><span aria-hidden="true">⌖</span><span id="mapLabel">Fort Wayne area · No plane selected</span></div><button class="map-reload" type="button" id="reloadMapBtn">↻ Reload map</button><button class="map-style" type="button" id="mapStyleBtn">Map: Topo ▾</button><button class="map-control" type="button" id="recenterBtn" disabled>⌖ Center on plane</button></section><aside class="side"><div class="card"><div class="card-label">Aircraft details</div><div id="tailDisplay" class="tail">—</div><div id="typeDisplay" class="aircraft">Select a saved airplane or enter a tail number.</div><div class="stats"><div><div class="card-label">Altitude</div><div id="altDisplay" class="value">—</div><div class="unit">feet</div></div><div><div class="card-label">Speed</div><div id="speedDisplay" class="value">—</div><div class="unit">mph (ground)</div></div><div><div class="card-label">Heading</div><div id="headingDisplay" class="value">—</div><div class="unit">degrees</div></div></div><div id="lastDisplay" class="last">The app will not check any aircraft until you ask it to.</div></div><div class="card notice"><strong>Important</strong> — This follows the <strong>airplane</strong>, not Jack's phone. Aircraft can disappear from public tracking because of low altitude, receiver coverage, equipment, or privacy settings. Missing data is not an emergency indication. Do not use this app for flight safety decisions.</div></aside></div>
-<footer>Free aircraft data: AvioADSB (CC BY 4.0) and delayed <a href="https://www.adsb.lol/" target="_blank" rel="noopener noreferrer">adsb.lol</a> samples (ODbL 1.0) via GitHub. Snapshots update approximately every 5 minutes, and are NOT LIVE. No paid API key required. Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors,  No flight data is invented. Current-session track only.</footer>
+<div class="layout"><section class="map-wrap" aria-label="Aircraft map"><div id="map"></div><div class="map-overlay"><span aria-hidden="true">⌖</span><span id="mapLabel">Fort Wayne area · No plane selected</span></div><button class="map-reload" type="button" id="reloadMapBtn">↻ Reload map</button><button class="map-style" type="button" id="mapStyleBtn">Map: Dark ▾</button><button class="map-control" type="button" id="recenterBtn" disabled>⌖ Center on plane</button></section><aside class="side"><div class="card"><div class="card-label">Aircraft details</div><div id="tailDisplay" class="tail">—</div><div id="typeDisplay" class="aircraft">Select a saved airplane or enter a tail number.</div><div class="stats"><div><div class="card-label">Altitude</div><div id="altDisplay" class="value">—</div><div class="unit">feet</div></div><div><div class="card-label">Speed</div><div id="speedDisplay" class="value">—</div><div class="unit">mph (ground)</div></div><div><div class="card-label">Heading</div><div id="headingDisplay" class="value">—</div><div class="unit">degrees</div></div></div><div id="lastDisplay" class="last">The app will not check any aircraft until you ask it to.</div></div><div class="card notice"><strong>Important</strong> — This follows the <strong>airplane</strong>, not Jack's phone. Aircraft can disappear from public tracking because of low altitude, receiver coverage, equipment, or privacy settings. Missing data is not an emergency indication. Do not use this app for flight safety decisions.</div></aside></div>
+<footer>Map: CARTO / OpenFreeMap vector tiles. Free aircraft data: AvioADSB (CC BY 4.0) and delayed <a href="https://www.adsb.lol/" target="_blank" rel="noopener noreferrer">adsb.lol</a> samples (ODbL 1.0) via GitHub. Snapshots update approximately every 5 minutes, and are NOT LIVE. No paid API key required. Map © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors,  No flight data is invented. Current-session track only.</footer>
 </main></div>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/maplibre-gl@5.12.0/dist/maplibre-gl.js"></script>
+<script src="./vector-map.js?v=1"></script>
 <script>
 'use strict';
 const input = document.getElementById('tailInput');
@@ -73,30 +74,21 @@ const backBtn = document.getElementById('backBtn');
 const refreshPlaneBtn=document.getElementById('refreshPlaneBtn');
 const stopTrackingBtn=document.getElementById('stopTrackingBtn');
 const autoRefreshToggle=document.getElementById('autoRefreshToggle');
-const map = L.map('map', {zoomControl:true,fadeAnimation:false,zoomAnimation:false}).setView([41.1,-85.15], 9);
-// USGS Topo is a public U.S. government basemap. Streets uses OSM standard tiles.
-// Users can switch between the two if their browser has trouble loading a provider.
-const topoTiles=L.tileLayer('https://basemap.nationalmap.gov/arcgis/rest/services/USGSTopo/MapServer/tile/{z}/{y}/{x}',{
- attribution:'Tiles: <a href="https://www.usgs.gov/programs/national-geospatial-program/national-map" target="_blank">USGS The National Map</a>',
- maxZoom:16,updateWhenIdle:false,keepBuffer:2
-});
-const streetTiles=L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
- attribution:'&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap contributors</a>',
- maxZoom:19,updateWhenIdle:false,keepBuffer:2
-});
-let mapTiles=topoTiles.addTo(map);
-let activeMapStyle='topo';
+const map=L.map('map',{zoomControl:true}).setView([41.1,-85.15],9);
+// Full vector rendering (no tile squares) with dark CARTO / OpenFreeMap styles.
+// Flight-marker and route helpers are provided by vector-map.js.
+const mapTiles=L.tileLayer('',{}).addTo(map);
+let activeMapStyle='dark';
 const mapStyleBtn=document.getElementById('mapStyleBtn');
 function chooseMapStyle(style){
- if(style===activeMapStyle)return;
- map.removeLayer(mapTiles);
- activeMapStyle=style;
- mapTiles=style==='streets'?streetTiles:topoTiles;
- mapTiles.addTo(map);
- mapStyleBtn.textContent=style==='streets'?'Map: Streets ▾':'Map: Topo ▾';
- map.invalidateSize({pan:false,animate:false});
+  if(style===activeMapStyle)return;
+  activeMapStyle=style;
+  map.changeStyle(style);
+  mapStyleBtn.textContent=style==='streets'?'Map: Streets ▾':'Map: Dark ▾';
+  map.invalidateSize();
 }
-mapStyleBtn.addEventListener('click',()=>chooseMapStyle(activeMapStyle==='topo'?'streets':'topo'));
+mapStyleBtn.textContent='Map: Dark ▾';
+mapStyleBtn.addEventListener('click',()=>chooseMapStyle(activeMapStyle==='dark'?'streets':'dark'));
 // Mobile webviews often resize after Leaflet initializes, leaving empty squares.
 function syncMapSize(){if(!document.hidden)map.invalidateSize({pan:false,animate:false})}
 map.whenReady(()=>{setTimeout(syncMapSize,150);setTimeout(syncMapSize,650)});
