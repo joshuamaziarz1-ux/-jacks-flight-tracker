@@ -87,6 +87,7 @@ try {
  assert.equal(await page.locator('#nearbyResults .nearby-row').count(),0,'airport switch must not search automatically');
  await page.click('#testBtn');
  await page.waitForSelector('#nearbyResults .nearby-row',{timeout:12000});
+ assert.equal(await page.locator('#radarRadius').inputValue(),'100','default aircraft search reaches 100 nautical miles');
  assert.equal(await page.locator('#nearbyResults .nearby-row').count(),2,'nearby real aircraft are filtered to selected airport');
  assert.ok((await page.locator('#nearbyResults').innerText()).includes('KSMD'));
  await page.locator('#nearbyResults .nearby-row').first().getByRole('button',{name:'Track →'}).click();
@@ -99,7 +100,10 @@ try {
  await page.click('[data-airport="GWB"]');
  assert.ok((await page.locator('#nearbyHint').innerText()).includes('DeKalb County Airport'));
  assert.equal(await page.locator('#nearbyResults .nearby-row').count(),0);
- console.log('PASS DeKalb and Smith Field airport selection, real-position list, manual tracking, no auto-poll.');
+ await page.locator('#radarRadius').selectOption('50');
+ assert.ok((await page.locator('#nearbyHint').innerText()).includes('50 nautical miles'));
+ assert.ok((await page.locator('#outsideRadar').getAttribute('href')).includes('zoom=8'));
+ console.log('PASS DeKalb and Smith Field airport selection, 100/50nm radius, real-position list, manual tracking, no auto-poll.');
  if(errors.length)console.log('Browser console observations',errors.slice(0,10).join(' || '));
  console.log('PASS iPhone-sized WebKit: vector map, both styles, idle startup and test flight.');
 }finally {
