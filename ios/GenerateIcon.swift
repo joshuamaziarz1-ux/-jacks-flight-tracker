@@ -21,7 +21,7 @@ NSGraphicsContext.saveGraphicsState()
 NSGraphicsContext.current = drawingContext
 
 NSColor(calibratedRed: 0.035, green: 0.086, blue: 0.153, alpha: 1).setFill()
-NSRectFill(NSRect(x: 0, y: 0, width: size, height: size))
+NSBezierPath(rect: NSRect(x: 0, y: 0, width: size, height: size)).fill()
 
 let ring = NSBezierPath(ovalIn: NSRect(x: 112, y: 112, width: 800, height: 800))
 ring.lineWidth = 38
