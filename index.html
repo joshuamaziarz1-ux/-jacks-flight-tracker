@@ -249,7 +249,7 @@ async function update(){
      const res=await fetchSource(source.base,source.registration(tail));
      if(serial!==requestSerial)return;
      ok=true;connectedSource=source.name;
-     const found=res.ac.find(a=>String(a.r||'').replace(/[^A-Z0-9]/gi,'').toUpperCase()===tail.replace(/[^A-Z0-9]/gi,''));
+     const found=res.ac.find(a=>String(a.r||'').replace(/[^A-Z0-9]/gi,'').toUpperCase()===tail.replace(/[^A-Z0-9]/gi,'') || String(a.hex||'').toUpperCase()===tail);
      if(found){record=found;break;}
    } catch(e){
      errors.push(source.name+': '+e.message);
